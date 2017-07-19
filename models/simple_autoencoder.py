@@ -1,36 +1,74 @@
 """
 This file contains the simplest autoencoder, as defined in https://blog.keras.io/building-autoencoders-in-keras.html
 """
-from keras.layers import Input, Dense
+from keras.layers import Input, Dense, Reshape
 from keras.models import Model
+from keras.engine.topology import InputLayer
 import h5py
 import numpy as np
 
-BIG_CHUNKS = 800000 # how many samples we take from the dataset
+BIG_CHUNKS = 20000 # how many samples we take from the dataset
 
 class Autoencoder(object):
 
     def __init__(self):
         self.autoencoder = None
 
-    def initialise(self, input_dimension=(1000, 2), encoding_dim=32):
+    def initialise(self, input_dimension=(5000, 2), encoding_dim=32):
         # this is the size of our encoded representations
         # this is our input placeholder
+        print()
+        print("input dimension", input_dimension)
         input_img = Input(shape=input_dimension)
+        print(type(input_img))
+        print("input shape",input_img._keras_shape)
+
+        # reshape the input from a vector to an input
+        input_reshape = Reshape((input_dimension[0]*input_dimension[1],),
+                                input_shape=input_img._keras_shape[1:])(input_img)
+        print("input reshape shape",input_reshape.shape)
+
         # "encoded" is the encoded representation of the input
-        encoded = Dense(encoding_dim, activation='relu')(input_img)
+        encoded = Dense(encoding_dim, activation='relu')(input_reshape)
+        print(type(encoded))
+        print("encoded shape", encoded.shape)
         # "decoded" is the lossy reconstruction of the input
-        decoded = Dense(2000, activation='sigmoid')(encoded)
+        decoded = Dense(input_dimension[0]*input_dimension[1],
+                        activation='sigmoid')(
+            encoded)
+
+        # reshape output
+        output_reshape = Reshape(input_dimension,
+                                 input_shape=(input_dimension[
+                                                  0]*input_dimension[1],))(decoded)
+        print("decoded shape", decoded.shape)
 
         # this model maps an input to its reconstruction
-        self.autoencoder = Model(input_img, decoded)
+        self.autoencoder = Model(input_img, output_reshape)
+        # print("model config", self.autoencoder.get_config())
+        for layer in self.autoencoder.get_config()['layers']:
+            print(layer)
+            print()
+        print(self.autoencoder.layers)
+        for layer in self.autoencoder.layers:
+            print(layer.output_shape)
+        # for layer in self.autoencoder.layers:
+        #     print(type(layer))
+        #     print(layer.__dict__)
+        #     if isinstance(layer, InputLayer):
+        #         # print(layer.name, layer._keras_shape)
+        #         pass
+        #     else:
+        #         print(layer.name, layer.shape)
         self.autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
     def fit(self, train_data, test_data):
         try:
+            print("train data shape", train_data.shape)
             hist = self.autoencoder.fit(train_data, train_data,
-                    epochs=4,
-                    batch_size=4096,  # after 2048 the average time per epoch (0.8M elements) is 20s
+                    epochs=100,
+                    batch_size=2048,  # after 2048 the average time per epoch (
+                                        # 0.8M elements) is 20s
                     shuffle=True)
             print(hist.history)
         except UnboundLocalError as e:
@@ -69,10 +107,11 @@ if __name__ == "__main__":
 
     data, _ = read_dataset(hdf5_file, hdf5_group)
     _, sample_size, audio_channels = data.shape
-    print(data.shape)
-    flattened_data = np.reshape(data, (BIG_CHUNKS, sample_size * audio_channels))
+    print("data shape", data.shape)
+    flattened_data = np.reshape(data, (BIG_CHUNKS, sample_size,audio_channels))
+    print("data shape after flatten", data.shape)
 
     autoencoder = Autoencoder()
     # autoencoder.initialise()
-    autoencoder.initialise(input_dimension=(sample_size*audio_channels,))
+    autoencoder.initialise(input_dimension=(sample_size,audio_channels))
     autoencoder.fit(flattened_data, _)
