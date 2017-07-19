@@ -1,4 +1,11 @@
-"""
+"""Simple autoencoder with generator
+
+This is a simple autoencdoer (it has only one compressed layer). It uses a 
+generator to iterate over the data in an online fashion. This allows two 
+interesting things:
+
+    1. Changing the size of the samples easily; and
+    2. a method for data augmentation (look for the step argument)
 
 """
 from keras.layers import Input, Dense, Reshape
