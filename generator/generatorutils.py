@@ -92,6 +92,7 @@ def read_samples(dataset, sample_length, chunk_size, step=None,
 
 
 def read_group_data(hdf5_file, group_name, sample_length, step=None):
+    # FIXME function not used
     if step == None: step = sample_length
     try:
         group = hdf5_file[group_name]
@@ -108,6 +109,23 @@ def read_group_data(hdf5_file, group_name, sample_length, step=None):
         yield sample
 
 
+def total_batches(dataset, sample_length, step, batch_size):
+    """Calculates the total batches in an epoch
+
+    In's intended to use as the steps_per_epoch argument for the 
+    fit_generator() function
+        
+    Args:
+        dataset (hdf5 dataset): the dataset with samples
+        sample_length (int): length of the sample
+        step (step): step between samples
+        batch_size (int): size of the batches
+
+    Returns:
+
+    """
+    total_audio_samples = dataset.shape[0] * dataset.shape[1]
+    return ((total_audio_samples - sample_length) // step) // batch_size
 
 if __name__ == "__main__":
     print("Main")
