@@ -31,7 +31,7 @@ def flatten_shape(array):
     return new_shape
 
 
-def read_samples(dataset, sample_length, chunk_size, step=None,
+def read_samples(dataset, sample_length, chunk_size, step=None, section=None,
                  buffer_size=BUFFER_SIZE):
     """Creates the samples reading the input dataset (np.array)
     
@@ -53,41 +53,61 @@ def read_samples(dataset, sample_length, chunk_size, step=None,
         is assumed that it is divided into chunks
         sample_length (int): desired output length of the samples
         chunk_size (int): size of the chunks in the dataset
+        section (tuple): indicates the section intended to read inside the 
+            dataset. E.g. if section=(0,100) then the function reads 
+            elements from 0 to 100 of the dataset (both included). If None 
+            then all the dataset is read.
         step (int): (optional) step between samples 
-        buffer_size (int): (optional) 
+        buffer_size (int): (optional) number of samples that are read to 
+            memory at once
+        section (int, int): (tuple) first and last index of the section of 
+            the dataset that is intended to read. The dataset is virtually 
+            limited to the section from first index to last index
 
     Returns:
         a generator that generates sample after sample following the 
         specifications until the end of the dataset is reached.
     """
-    chunks_in_buffer = buffer_size // chunk_size
-    dataset_length = len(dataset)
+    if section == None or not type(section) == tuple:
+        section = (0, len(dataset))
+    start_of_section = section[0]
+    end_of_section = section[1]
+    print("start of section:", start_of_section)
+
+    # by the extra substraction we protect ourselves from overflowing the
+    # buffer
+    #TODO this may not be the best way, but if there are remaining samples
+    # from the previoius iteration and we load to memory more from disk we
+    # may overflow the buffer
+    chunks_in_buffer = buffer_size // chunk_size - chunk_size // \
+                                                   sample_length - 1
     if step == None: step=sample_length
 
-    buffer = dataset[0] #load first chunk
-    bottom_index = 1 # 1 because the first chunk (0) was read already
+    buffer = dataset[start_of_section] # load first chunk
+    bottom_index = start_of_section + 1 # +1 because the first chunk (
+    # start_of_section) was read already
     top_index = bottom_index # just some initialisation
 
     step_index = 0 # index to move step by step
 
     # loop
-    while top_index < dataset_length:
-        # TODO last audio samples may not be used due to the break condition
-        if bottom_index+chunks_in_buffer < dataset_length:
-            top_index = bottom_index+chunks_in_buffer
+    while top_index < end_of_section:
+        if bottom_index + chunks_in_buffer < end_of_section:
+            top_index = bottom_index + chunks_in_buffer
         else:
-            top_index = dataset_length
+            top_index = end_of_section
 
         new_read_data = dataset[bottom_index:top_index]
         new_read_data = np.reshape(new_read_data, flatten_shape(new_read_data))
         buffer = np.concatenate((buffer[step_index:], new_read_data), axis=0)
         step_index = 0
 
-        for index in range(0,buffer.shape[0] - sample_length, step):
+        for index in range(0, buffer.shape[0] - sample_length, step):
             # iterate over all the samples taken from the buffer
             yield buffer[index:index+sample_length]
 
-        # prepare old samples to disposal
+        # prepare old samples to disposal, by doing this, all the samples
+        # 'begind' have been used already
         step_index = index + step
 
 
@@ -109,7 +129,7 @@ def read_group_data(hdf5_file, group_name, sample_length, step=None):
         yield sample
 
 
-def total_batches(dataset, sample_length, step, batch_size):
+def total_batches(dataset, sample_length, step, batch_size, section=None):
     """Calculates the total batches in an epoch
 
     In's intended to use as the steps_per_epoch argument for the 
@@ -124,8 +144,20 @@ def total_batches(dataset, sample_length, step, batch_size):
     Returns:
 
     """
-    total_audio_samples = dataset.shape[0] * dataset.shape[1]
+    print("dataset shape", dataset.shape)
+    print("section", section)
+    if section == None:
+        print("no section")
+        total_audio_samples = dataset.shape[0] * dataset.shape[1]
+    else:
+        print("yes section")
+        songs_lengths = dataset.attrs["songs_lengths"]
+        print("len songs_lengths", len(songs_lengths))
+        total_audio_samples = sum(songs_lengths[section[0]:section[1]+1
+                                  ]) * dataset.shape[1]
+    print("Total audio samples = ", total_audio_samples)
     return ((total_audio_samples - sample_length) // step) // batch_size
+
 
 if __name__ == "__main__":
     print("Main")
