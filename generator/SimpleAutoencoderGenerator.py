@@ -19,7 +19,44 @@ class SimpleAutoencoderGenerator(object):
         self.h5g = self.h5f[hdf5_group]
         self.buffer_size = buffer_size
 
-    def generate_samples(self, sample_length, step=None, batch_size=1000):
+        # default configuration
+        self.__configuration = {
+            "sample_length": None,
+            "step": None,
+            "batch_size": 1000,
+            "section": None
+        }
+
+    def configure(self, **kwargs):
+        """Sets the configuration
+        
+        The possible keys are
+        sample_length (int): length of the sample (in sound samples).
+        step (int): step of the window
+        batch_size (int): size of the batch; i.e. how many samples are 
+            processed at one
+        section (int, int): tuple indicating first and last index of the 
+            part of the dataset in which the samples are extracted
+            
+        Examples:
+            This method can be called in the named attribute fashion of 
+            Python, providing one or more key-value pairs at once
+            
+                configure(sample_length=1000)
+                configure(step=500)
+                # is equivalent to
+                configure(sample_length=1000, step=500)
+        
+        Args:
+            **kwargs: dictionary of key-value pairs. Check allowed keys above
+
+        """
+        for key in kwargs:
+            self.__configuration[key] = kwargs[key]
+
+    def generate_samples(self, sample_length, step=None, batch_size=1000,
+                         section=None):
+        section = (0, 3439)
         if step == None: step = sample_length
         try:
             data = self.h5g['data']  # take dataset
@@ -43,11 +80,14 @@ class SimpleAutoencoderGenerator(object):
                     # restart the generator
                     gen = read_samples(data, sample_length, chunk_size,
                                        step=step,
-                                       buffer_size=self.buffer_size)
+                                       buffer_size=self.buffer_size,
+                                       section=section)
                     sample = next(gen)
                 batch_features[index] = sample
             yield batch_features, batch_features
 
-    def get_nsamples(self, sample_length, step=None, batch_size=None):
+    def get_nsamples(self, sample_length, step=None, batch_size=None,
+                     section=None):
         if step == None: step = sample_length
-        return total_batches(self.h5g['data'], sample_length, step, batch_size)
+        return total_batches(self.h5g['data'], sample_length, step,
+                             batch_size, section=section)
