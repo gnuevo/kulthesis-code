@@ -13,19 +13,50 @@ from keras.models import Model
 from generator.SimpleAutoencoderGenerator import SimpleAutoencoderGenerator
 from functools import reduce
 import operator
+import h5py
 
 class AutoencoderWithGenerator(object):
     def __init__(self, hdf5_file, hdf5_group, input_dimension=(1000, 2),
                  encoding_dim=32):
+        """Initialises the autoencoder
+        
+        This is a simple autoencoder. It has only one layer for encoding and 
+        one layer for decoding.
+        
+        Args:
+            hdf5_file (str): name of the hdf5 file that contains the dataset 
+            hdf5_group (str): name of the hdf5 group that contains the dataset
+            input_dimension: (int or tuple of ints) input dimension of the 
+                network
+            encoding_dim (int): size of the encoded layer of the autoencoder 
+        """
         self.__generator = SimpleAutoencoderGenerator(hdf5_file, hdf5_group)
         self.__input_dimension = input_dimension # equivalent to sample_length
         self.__encoding_dim = encoding_dim
 
-        # total_audio_samples =
+        self.__initialise(input_dimension=input_dimension, encoding_dim=encoding_dim)
 
-        self.initialise(input_dimension=input_dimension, encoding_dim=encoding_dim)
+    def initialise(self):
+        """Initialise the neural network
+        
+        The neural network gets already initialised during __init__ so if 
+        this methode is called the network behind is restarted.
+        """
+        self.__initialise(input_dimension=self.__input_dimension,
+                          encoding_dim=self.__encoding_dim)
 
-    def initialise(self, input_dimension=(1000, 2), encoding_dim=32):
+    def __initialise(self, input_dimension=(1000, 2), encoding_dim=32):
+        """Initialises the neural network
+        
+        Creates an autoencoder type neural network following the 
+        specifications of the arguments
+        
+        Args:
+            input_dimension (int or tuple of ints): input dimension for the 
+                network, if it is a touple the input is flattened to only 
+                one dimension
+            encoding_dim (int): compressed size
+        """
         if len(input_dimension) > 1:
             flattened_dimension = (reduce(operator.mul, input_dimension),)
         else:
@@ -54,28 +85,49 @@ class AutoencoderWithGenerator(object):
             decoded = Dense(flattened_dimension, activation='relu')(encoded)
             output = decoded
 
-
-        # # "encoded" is the encoded representation of the input
-        # encoded = Dense(encoding_dim, activation='relu')(input_tensor)
-        # # "decoded" is the lossy reconstruction of the input
-        # decoded = Dense(input_dimension[0]*input_dimension[1],
-        #                 activation='sigmoid')(encoded)
-
         # this model maps an input to its reconstruction
         self.__autoencoder = Model(input_tensor, output)
         self.__autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
-    def fit_generator(self, batch_size=1000, epochs=1, step=None):
+    def fit_generator(self, batch_size=1000, epochs=1, step=None,
+                      section=None):
         if step == None: step = self.__input_dimension[0]
-        print(self.__generator.get_nsamples(self.__input_dimension[0], step,
-                                            batch_size))
+
+        self.__generator.configure(sample_length=self.__input_dimension[0],
+                                   batch_size=batch_size,
+                                   step=step,
+                                   section=section)
+        print(self.__generator.get_nbatches_in_epoch())
         self.__autoencoder.fit_generator(
-            self.__generator.generate_samples(self.__input_dimension[0],
-                                              step=step, batch_size=batch_size),
-            self.__generator.get_nsamples(self.__input_dimension[0], step,
-                                          batch_size),
+            self.__generator.generate_samples(),
+            self.__generator.get_nbatches_in_epoch(),
             epochs=epochs
             )
+
+    def train_dataset(self, batch_size=1000, epochs=1, step=None):
+        """Trains the dataset using the train section
+        
+        Gets the train section from the dataset and trains it with that section
+        
+        Args:
+            batch_size (int): size of the batch
+            epochs (int): number of epochs
+            step (int): offset between samples
+        """
+        if step == None: step = self.__input_dimension[0]
+
+        # get info of the training section
+        data = self.__generator.h5g["data"]
+        train_section = data.attrs["train_set"]
+
+        # train
+        self.fit_generator(batch_size=batch_size, epochs=epochs, step=step,
+                           section=train_section)
+
+    def validate_dataset(self):
+        pass
+    def test_dataset(self):
+        pass
 
 
 if __name__ == "__main__":
