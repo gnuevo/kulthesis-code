@@ -119,6 +119,7 @@ class AutoencoderWithGenerator(object):
         # get info of the training section
         data = self.__generator.h5g["data"]
         train_section = data.attrs["train_set"]
+        train_section = tuple(train_section)
 
         # train
         self.fit_generator(batch_size=batch_size, epochs=epochs, step=step,
