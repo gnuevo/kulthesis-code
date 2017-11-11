@@ -23,6 +23,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch", help="Batch size", type=int, default=10000)
     parser.add_argument("--step", help="The step between samples", type=int,
                         default=None)
+    parser.add_argument("-e", "--epochs", help="The number of epochs to "
+                                               "compute", type=int, default=1)
     dargs = parser.parse_args()
 
     hdf5_file = dargs.hdf5_file
@@ -31,10 +33,11 @@ if __name__ == "__main__":
     encoded_size = dargs.encoded_size
     batch_size = dargs.batch
     step = dargs.step
+    epochs = dargs.epochs
 
     autoencoder = AutoencoderWithGenerator(hdf5_file, hdf5_group,
                                            input_dimension=(dimension, 2),
                                            encoding_dim=encoded_size)
     print(autoencoder)
     # autoencoder.fit_generator(batch_size=batch_size, step=step, epochs=2)
-    autoencoder.train_dataset(batch_size=batch_size, step=step, epochs=2)
+    autoencoder.train_dataset(batch_size=batch_size, step=step, epochs=epochs)
