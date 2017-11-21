@@ -104,6 +104,7 @@ class AutoencoderWithGenerator(object):
 
     def callback_add_tensorboard(self, log_dir='/tmp/autoencoder',
                                  histogram_freq=1, write_graph=True):
+        from callbacks.customTensorBoard import customTensorBoard
         tensorboard_callback = TensorBoard(log_dir=log_dir,
                                            histogram_freq=histogram_freq,
                                            write_graph=write_graph)
@@ -111,6 +112,15 @@ class AutoencoderWithGenerator(object):
         # there is no point into keeping several callbacks to tensorflow
         self.__callbacks = [callback for callback in self.__callbacks if not
                         type(callback) == type(tensorboard_callback)]
+        self.__callbacks.append(tensorboard_callback)
+
+        tensorboard_callback = customTensorBoard(log_dir=log_dir,
+                                           histogram_freq=histogram_freq,
+                                           write_graph=write_graph)
+        # remove a posible tensorboard callback from the list
+        # there is no point into keeping several callbacks to tensorflow
+        self.__callbacks = [callback for callback in self.__callbacks if not
+        type(callback) == type(tensorboard_callback)]
         self.__callbacks.append(tensorboard_callback)
 
     def fit_generator(self, batch_size=1000, epochs=1, step=None,
