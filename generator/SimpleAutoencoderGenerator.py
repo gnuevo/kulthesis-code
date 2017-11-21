@@ -6,6 +6,7 @@ just a wrapper over some functions in generatorutils
 import h5py
 import json
 import numpy as np
+from random import shuffle
 from .generatorutils import read_samples, total_batches
 
 
@@ -125,7 +126,7 @@ class SimpleAutoencoderGenerator(object):
                 raise KeyError("Key {} in configuration not in configuration"
                                " keys: {}".format(key, self._configuration_keys))
 
-    def generate_samples(self):
+    def generate_samples(self, randomise=True):
         """Generate batches of samples indefinitely
         
         Generates batches of samples indefinitely according to the 
@@ -168,6 +169,12 @@ class SimpleAutoencoderGenerator(object):
                                        section=section)
                     sample = next(gen)
                 batch_features[index] = sample
+            if randomise:
+                # generate random indices
+                indices = list(range(batch_size))
+                shuffle(indices)
+                # randomise the batch
+                batch_features = batch_features[indices]
             yield batch_features, batch_features
 
     def get_nbatches_in_epoch(self):
