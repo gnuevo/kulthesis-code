@@ -156,7 +156,9 @@ class SimpleAutoencoderGenerator(object):
         batch_features = np.zeros((batch_size, sample_length, 2)) # FIXME, hadcoded 2, because there are 2 audio channels
         gen = read_samples(data, sample_length, chunk_size,
                                                 step=step,
-                                                buffer_size=self.buffer_size)
+                                                buffer_size=self.buffer_size,
+                                                section=section)
+
         while True: # generators are intended to work indefinitely
             for index in range(batch_size):
                 try:
@@ -167,15 +169,16 @@ class SimpleAutoencoderGenerator(object):
                                        step=step,
                                        buffer_size=self.buffer_size,
                                        section=section)
-                    sample = next(gen)
+                    break
+                    # sample = next(gen)
                 batch_features[index] = sample
             if randomise:
                 # generate random indices
-                indices = list(range(batch_size))
+                indices = list(range(index + 1))
                 shuffle(indices)
                 # randomise the batch
-                batch_features = batch_features[indices]
-            yield batch_features, batch_features
+                output_batch = batch_features[indices]
+            yield output_batch, output_batch
 
     def get_nbatches_in_epoch(self):
         """Returns the number of batches that make an epoch

@@ -3,6 +3,7 @@
 """
 
 import numpy as np
+import math
 
 
 BUFFER_SIZE = 100000 # size in samples of the
@@ -72,7 +73,6 @@ def read_samples(dataset, sample_length, chunk_size, step=None, section=None,
         section = (0, len(dataset))
     start_of_section = section[0]
     end_of_section = section[1]
-    print("start of section:", start_of_section)
 
     # by the extra substraction we protect ourselves from overflowing the
     # buffer
@@ -98,6 +98,7 @@ def read_samples(dataset, sample_length, chunk_size, step=None, section=None,
             top_index = end_of_section
 
         new_read_data = dataset[bottom_index:top_index]
+        bottom_index = top_index
         new_read_data = np.reshape(new_read_data, flatten_shape(new_read_data))
         buffer = np.concatenate((buffer[step_index:], new_read_data), axis=0)
         step_index = 0
@@ -129,34 +130,49 @@ def read_group_data(hdf5_file, group_name, sample_length, step=None):
         yield sample
 
 
-def total_batches(dataset, sample_length, step, batch_size, section=None):
+def total_batches(dataset, sample_length, step, batch_size, section=None,
+                  input_format="chunks"):
     """Calculates the total batches in an epoch
 
     In's intended to use as the steps_per_epoch argument for the 
     fit_generator() function
+    
+    Equivalent code for this could be done using the range function. For 
+    example, for the "songs" case
+        math.ceil(len(range(0, total_audio_samples-step+1, step)) / batch_size)
         
     Args:
         dataset (hdf5 dataset): the dataset with samples
         sample_length (int): length of the sample
         step (step): step between samples
         batch_size (int): size of the batches
+        input_format (str): "chunks" or "songs", refers to the format of the
+            section itself, if the numbers refer to the index of the chunk 
+            or the index of the song
 
     Returns:
-
+        (int), the number of batches
     """
     print("dataset shape", dataset.shape)
     print("section", section)
     if section == None:
-        print("no section")
         total_audio_samples = dataset.shape[0] * dataset.shape[1]
     else:
-        print("yes section")
-        songs_lengths = dataset.attrs["songs_lengths"]
-        print("len songs_lengths", len(songs_lengths))
-        total_audio_samples = sum(songs_lengths[section[0]:section[1]+1
+        if input_format == "songs":
+            songs_lengths = dataset.attrs["songs_lengths"]
+            total_audio_samples = sum(songs_lengths[section[0]:section[1]+1
                                   ]) * dataset.shape[1]
+        elif input_format == "chunks":
+            total_audio_samples = (section[1] - section[0]) * dataset.shape[1]
+        else:
+            raise ValueError("input_format must be either 'chunks' or "
+                             "'songs', gotten", input_format)
     print("Total audio samples = ", total_audio_samples)
-    return ((total_audio_samples - sample_length) // step) // batch_size
+    print("Numero de muestras", (total_audio_samples - sample_length) // step)
+    n_batches = math.ceil(((total_audio_samples - sample_length) // step) / \
+                batch_size)
+    print("Total number of batches", n_batches)
+    return n_batches
 
 
 if __name__ == "__main__":

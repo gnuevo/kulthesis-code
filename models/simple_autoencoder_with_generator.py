@@ -14,6 +14,7 @@ from keras.callbacks import TensorBoard
 from generator.SimpleAutoencoderGenerator import SimpleAutoencoderGenerator
 from functools import reduce
 import operator
+import json
 import h5py
 
 class AutoencoderWithGenerator(object):
@@ -102,26 +103,53 @@ class AutoencoderWithGenerator(object):
         self.__autoencoder = Model(input_tensor, output)
         self.__autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
 
-    def callback_add_tensorboard(self, log_dir='/tmp/autoencoder',
-                                 histogram_freq=1, write_graph=True):
-        from callbacks.customTensorBoard import customTensorBoard
-        tensorboard_callback = TensorBoard(log_dir=log_dir,
-                                           histogram_freq=histogram_freq,
-                                           write_graph=write_graph)
-        # remove a posible tensorboard callback from the list
-        # there is no point into keeping several callbacks to tensorflow
-        self.__callbacks = [callback for callback in self.__callbacks if not
-                        type(callback) == type(tensorboard_callback)]
-        self.__callbacks.append(tensorboard_callback)
+    def song_section_to_chunk_section(self, data, song_section):
+        """Converts a song section into a chunck section
+        
+        Sections represent portions of the dataset in a tuple format
+            (start of section, end of section)
+            (start index, end index)
+        but the indexes themselves can represent a song or just a chunk of the 
+        dataset. This fuction gets the former and converts into the latter, 
+        which is the format needed for training.
+        
+        Args:
+            data: dataset from which metadata will be retreived
+            song_section: tuple (start index, end index) 
 
-        tensorboard_callback = customTensorBoard(log_dir=log_dir,
-                                           histogram_freq=histogram_freq,
-                                           write_graph=write_graph)
-        # remove a posible tensorboard callback from the list
-        # there is no point into keeping several callbacks to tensorflow
-        self.__callbacks = [callback for callback in self.__callbacks if not
-        type(callback) == type(tensorboard_callback)]
-        self.__callbacks.append(tensorboard_callback)
+        Returns:
+            (section chunk start index, section chunk end index)
+
+        """
+        songs_lengths = [int(length) for length in data.attrs["songs_lengths"]]
+        start_index = sum(songs_lengths[0:song_section[0]])
+        end_index = sum(songs_lengths[0:song_section[1]+1])
+        return (start_index, end_index)
+
+    def callback_add_tensorboard(self, log_dir='/tmp/autoencoder',
+                                 histogram_freq=1, write_graph=True,
+                                 batch_freq=None, variables=['loss', 'val_loss']):
+        from callbacks.customTensorBoard import customTensorBoard
+        if batch_freq == None: # add standard callback
+            tensorboard_callback = TensorBoard(log_dir=log_dir,
+                                               histogram_freq=histogram_freq,
+                                               write_graph=write_graph)
+            # remove a posible tensorboard callback from the list
+            # there is no point into keeping several callbacks to tensorflow
+            # self.__callbacks = [callback for callback in self.__callbacks if not
+            #                 type(callback) == type(tensorboard_callback)]
+            self.__callbacks.append(tensorboard_callback)
+        else: # add custom callback
+            tensorboard_callback = customTensorBoard(log_dir=log_dir,
+                                               histogram_freq=histogram_freq,
+                                               write_graph=write_graph,
+                                               batch_freq=batch_freq,
+                                               variables=variables)
+            # remove a posible tensorboard callback from the list
+            # there is no point into keeping several callbacks to tensorflow
+            # self.__callbacks = [callback for callback in self.__callbacks if not
+            #     type(callback) == type(tensorboard_callback)]
+            self.__callbacks.append(tensorboard_callback)
 
     def fit_generator(self, batch_size=1000, epochs=1, step=None,
                       train_section=None, val_section=None):
@@ -140,7 +168,8 @@ class AutoencoderWithGenerator(object):
             val_steps = None
 
         callbacks = self.__callbacks if not self.__callbacks == [] else None
-
+        print("Fit generator, train section", train_section)
+        print("validation_steps", val_steps)
         self.__generator.configure(sample_length=self.__input_dimension[0],
                                    batch_size=batch_size,
                                    step=step,
@@ -155,7 +184,7 @@ class AutoencoderWithGenerator(object):
             callbacks=callbacks
             )
 
-    def train_dataset(self, batch_size=1000, epochs=1, step=None,
+    def train_dataset(self, batch_size=100, epochs=1, step=None,
                       validation=True):
         """Trains the dataset using the train section
         
@@ -172,10 +201,16 @@ class AutoencoderWithGenerator(object):
         data = self.__generator.h5g["data"]
         train_section = data.attrs["train_set"]
         train_section = tuple(train_section)
+        print("Train section", train_section)
+        train_section = self.song_section_to_chunk_section(data, train_section)
+        print("Train section", train_section)
 
         if validation:
             val_section = data.attrs["val_set"]
             val_section = tuple(val_section)
+            print("Val section", val_section)
+            val_section = self.song_section_to_chunk_section(data, val_section)
+            print("Val section", val_section)
         else:
             val_section = None
 

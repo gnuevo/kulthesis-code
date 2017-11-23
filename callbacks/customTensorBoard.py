@@ -49,6 +49,10 @@ class customTensorBoard(kcallbacks.Callback):
             [details](https://www.tensorflow.org/how_tos/embedding_viz/#metadata_optional)
             about metadata files format. In case if the same metadata file is
             used for all embedding layers, string can be passed.
+            
+        batch_freq: frequency in epochs in which you want to write the
+            summaries to disk. If none then the summaries are written for
+            every epoch.
     """
 
     def __init__(self, log_dir='./logs',
@@ -58,6 +62,8 @@ class customTensorBoard(kcallbacks.Callback):
                  embeddings_freq=0,
                  embeddings_layer_names=None,
                  embeddings_metadata=None,
+                 batch_freq=None,
+                 batches_per_epoch=None,
                  variables=['loss', 'val_loss']):
         super(customTensorBoard, self).__init__()
         if K.backend() != 'tensorflow':
@@ -72,6 +78,9 @@ class customTensorBoard(kcallbacks.Callback):
         self.embeddings_layer_names = embeddings_layer_names
         self.embeddings_metadata = embeddings_metadata or {}
         self.variables = variables
+        self.batch_freq = batch_freq
+        self.batches_per_epoch = batches_per_epoch
+        self.batch_count = -1
 
     def set_model(self, model):
         self.model = model
@@ -104,12 +113,11 @@ class customTensorBoard(kcallbacks.Callback):
             else:
                 self.writer[var] = tf.summary.FileWriter(self.log_dir+'/'+var)
 
-
-    def on_epoch_end(self, epoch, logs=None):
+    def write_summaries(self, index, logs=None, variables=None):
         logs = logs or {}
 
         if self.validation_data and self.histogram_freq:
-            if epoch % self.histogram_freq == 0:
+            if index % self.histogram_freq == 0:
                 # TODO: implement batched calls to sess.run
                 # (current call will likely go OOM on GPU)
                 if self.model.uses_learning_phase:
@@ -122,18 +130,31 @@ class customTensorBoard(kcallbacks.Callback):
                 feed_dict = dict(zip(tensors, val_data))
                 result = self.sess.run([self.merged], feed_dict=feed_dict)
                 summary_str = result[0]
-                self.writer.add_summary(summary_str, epoch)
+                self.writer.add_summary(summary_str, index)
 
         for name, value in logs.items():
-            if name not in self.variables:
+            if name not in variables:
                 continue
             summary = tf.Summary()
             summary_value = summary.value.add()
             summary_value.simple_value = value.item()
             summary_value.tag = "value"
-            self.writer[name].add_summary(summary, epoch)
+            self.writer[name].add_summary(summary, index)
         for key, writer in self.writer.items():
             writer.flush()
+
+    def on_batch_end(self, batch, logs=None):
+        self.batch_count += 1
+        index = self.batch_count
+        if not self.batch_freq == None:
+            if batch % self.batch_freq == 0:
+                self.write_summaries(index, logs, variables=["loss"])
+
+    def on_epoch_end(self, epoch, logs=None):
+        if self.batch_freq == None:
+            self.write_summaries(epoch, logs, variables=self.variables)
+        else:
+            self.write_summaries(self.batch_count, logs, variables=self.variables)
 
     def on_train_end(self, _):
         for key, writer in self.writer.items():
