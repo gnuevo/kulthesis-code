@@ -29,6 +29,10 @@ if __name__ == "__main__":
                                            "epoch", action="store_true")
     parser.add_argument("--tblogdir", help="logdir of tensorboard",
                         type=str, default="/tmp/tensorboard")
+    parser.add_argument("--tbbatchfreq", help="Number in batches to "
+                                                    "write results to disk",
+                        type=int,
+                        default=None)
     dargs = parser.parse_args()
 
     hdf5_file = dargs.hdf5_file
@@ -39,6 +43,7 @@ if __name__ == "__main__":
     step = dargs.step
     epochs = dargs.epochs
     log_dir = dargs.tblogdir
+    batch_freq = dargs.tbbatchfreq
     validation = dargs.validate
 
     autoencoder = AutoencoderWithGenerator(hdf5_file, hdf5_group,
@@ -46,6 +51,9 @@ if __name__ == "__main__":
                                            encoding_dim=encoded_size)
     print(autoencoder)
     # autoencoder.fit_generator(batch_size=batch_size, step=step, epochs=2)
+    autoencoder.callback_add_tensorboard(log_dir=log_dir,
+                                         batch_freq=batch_freq, variables=[
+                                            'loss', 'val_loss'])
     autoencoder.callback_add_tensorboard(log_dir=log_dir)
     autoencoder.train_dataset(batch_size=batch_size, step=step,
                               epochs=epochs, validation=validation)

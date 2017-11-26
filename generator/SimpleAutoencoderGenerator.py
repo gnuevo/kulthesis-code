@@ -178,6 +178,8 @@ class SimpleAutoencoderGenerator(object):
                 shuffle(indices)
                 # randomise the batch
                 output_batch = batch_features[indices]
+            else:
+                output_batch = batch_features
             yield output_batch, output_batch
 
     def get_nbatches_in_epoch(self):
