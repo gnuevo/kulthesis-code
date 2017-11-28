@@ -50,3 +50,6 @@ fabric.properties
 
 # mine
 __pycache__
+*.pyc
+tensorboard/*
+trained_models/*
