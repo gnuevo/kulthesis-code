@@ -151,6 +151,21 @@ class AutoencoderWithGenerator(object):
             #     type(callback) == type(tensorboard_callback)]
             self.__callbacks.append(tensorboard_callback)
 
+    def callback_add_earlystopping(self, monitor="val_loss", patience=3):
+        from keras.callbacks import EarlyStopping
+        earlystopping_callback = EarlyStopping(monitor=monitor,
+                                               patience=patience, mode='min')
+        self.__callbacks = [callback for callback in self.__callbacks if not
+             type(callback) == type(earlystopping_callback)]
+        self.__callbacks.append(earlystopping_callback)
+
+    def callback_add_modelcheckpoint(self, filepath, period=1):
+        from keras.callbacks import ModelCheckpoint
+        modelcheckpoint_callback = ModelCheckpoint(filepath, period=period)
+        self.__callbacks = [callback for callback in self.__callbacks if not
+            type(callback) == type(modelcheckpoint_callback)]
+        self.__callbacks.append(modelcheckpoint_callback)
+
     def fit_generator(self, batch_size=1000, epochs=1, step=None,
                       train_section=None, val_section=None):
         if step == None: step = self.__input_dimension[0]
