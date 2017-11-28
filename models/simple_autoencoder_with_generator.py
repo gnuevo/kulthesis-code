@@ -46,16 +46,21 @@ class AutoencoderWithGenerator(object):
 
         self.__initialise(input_dimension=input_dimension, encoding_dim=encoding_dim)
 
-    def initialise(self):
+    def initialise(self, activation='relu', optimizer='adadelta',
+                   loss='binary_crossentropy'):
         """Initialise the neural network
         
         The neural network gets already initialised during __init__ so if 
         this methode is called the network behind is restarted.
         """
         self.__initialise(input_dimension=self.__input_dimension,
-                          encoding_dim=self.__encoding_dim)
+                          encoding_dim=self.__encoding_dim,
+                          activation=activation, optimizer=optimizer,
+                          loss=loss)
 
-    def __initialise(self, input_dimension=(1000, 2), encoding_dim=32):
+    def __initialise(self, input_dimension=(1000, 2), encoding_dim=32,
+                     activation='relu', optimizer='adadelta',
+                     loss='binary_crossentropy'):
         """Initialises the neural network
         
         Creates an autoencoder type neural network following the 
@@ -83,15 +88,15 @@ class AutoencoderWithGenerator(object):
                                     input_shape=input_dimension,
                                     name="input_reshape")(
                 input_tensor)
-            encoded = Dense(encoding_dim, activation='relu',
+            encoded = Dense(encoding_dim, activation=activation,
                             name="encoder")(input_reshape)
         else:
-            encoded = Dense(encoding_dim, activation='relu', name="encoder")(
+            encoded = Dense(encoding_dim, activation=activation, name="encoder")(
                 input_tensor)
 
         # decode, reshape if necessary
         if len(input_dimension) > 1:
-            decoded = Dense(flattened_dimension[0], activation='relu',
+            decoded = Dense(flattened_dimension[0], activation=activation,
                             name="decoder"
                             )(encoded)
             output = Reshape(input_dimension,
@@ -99,13 +104,13 @@ class AutoencoderWithGenerator(object):
                              name="output_reshape")(
                 decoded)
         else:
-            decoded = Dense(flattened_dimension, activation='relu',
+            decoded = Dense(flattened_dimension, activation=activation,
                             name="decoder")(encoded)
             output = decoded
 
         # this model maps an input to its reconstruction
         self.__autoencoder = Model(input_tensor, output)
-        self.__autoencoder.compile(optimizer='adadelta', loss='binary_crossentropy')
+        self.__autoencoder.compile(optimizer=optimizer, loss=loss)
 
     def song_section_to_chunk_section(self, data, song_section):
         """Converts a song section into a chunck section
