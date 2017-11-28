@@ -14,6 +14,10 @@ from keras.callbacks import TensorBoard
 from generator.SimpleAutoencoderGenerator import SimpleAutoencoderGenerator
 from functools import reduce
 import operator
+try:
+   import cPickle as pickle
+except:
+   import pickle
 import json
 import h5py
 
@@ -167,7 +171,7 @@ class AutoencoderWithGenerator(object):
         self.__callbacks.append(modelcheckpoint_callback)
 
     def fit_generator(self, batch_size=1000, epochs=1, step=None,
-                      train_section=None, val_section=None):
+                      train_section=None, val_section=None, history_file=None):
         if step == None: step = self.__input_dimension[0]
         if val_section:
             val_generator = SimpleAutoencoderGenerator(self.__hdf5_file,
@@ -190,7 +194,7 @@ class AutoencoderWithGenerator(object):
                                    step=step,
                                    section=train_section)
         print(self.__generator.get_nbatches_in_epoch())
-        self.__autoencoder.fit_generator(
+        history = self.__autoencoder.fit_generator(
             self.__generator.generate_samples(),
             self.__generator.get_nbatches_in_epoch(),
             validation_data=val_data,
@@ -198,6 +202,8 @@ class AutoencoderWithGenerator(object):
             epochs=epochs,
             callbacks=callbacks
             )
+        if history_file is not None:
+            pickle(history.history, history_file)
 
     def train_dataset(self, batch_size=100, epochs=1, step=None,
                       validation=True):
