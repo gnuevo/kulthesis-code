@@ -126,12 +126,24 @@ class SimpleAutoencoderGenerator(object):
                 raise KeyError("Key {} in configuration not in configuration"
                                " keys: {}".format(key, self._configuration_keys))
 
-    def generate_samples(self, randomise=True):
+    def divide_in_batches(self, samples, num_samples, batch_size):
+        for index in range(0, num_samples, batch_size):
+            upper_index = min(index+batch_size, num_samples)
+            yield samples[index:upper_index]
+
+    def generate_samples(self, randomise=True, buffer_size=1000):
         """Generate batches of samples indefinitely
         
         Generates batches of samples indefinitely according to the 
         specifications in the configuration parameters
         
+        Args:
+            randomise: (bool) if True the output samples are in random order
+            buffer_size: (int) determines the size of the span in which the 
+                samples are going to be randomised. Eg, if 1000 then 1000
+                samples are generated, then randomised, divided into batches
+                and returned
+            
         Returns: a python generator that can be used to generate batch after
             batch
 
@@ -152,15 +164,18 @@ class SimpleAutoencoderGenerator(object):
         batch_size = self._configuration["batch_size"]
         section = self._configuration["section"]
 
+        batches_in_buffer = buffer_size // batch_size
         # create array to store the batch
-        batch_features = np.zeros((batch_size, sample_length, 2)) # FIXME, hadcoded 2, because there are 2 audio channels
+        buffer_features = np.zeros((batches_in_buffer * batch_size, \
+                                                     sample_length, 2)) # FIXME,
+        # hadcoded 2, because there are 2 audio channels
         gen = read_samples(data, sample_length, chunk_size,
                                                 step=step,
                                                 buffer_size=self.buffer_size,
                                                 section=section)
 
         while True: # generators are intended to work indefinitely
-            for index in range(batch_size):
+            for index in range(batches_in_buffer * batch_size):
                 try:
                     sample = next(gen)
                 except StopIteration:
@@ -171,16 +186,19 @@ class SimpleAutoencoderGenerator(object):
                                        section=section)
                     break
                     # sample = next(gen)
-                batch_features[index] = sample
+                buffer_features[index] = sample
             if randomise:
                 # generate random indices
                 indices = list(range(index + 1))
                 shuffle(indices)
                 # randomise the batch
-                output_batch = batch_features[indices]
+                randomised_buffer = buffer_features[indices]
             else:
-                output_batch = batch_features
-            yield output_batch, output_batch
+                randomised_buffer = buffer_features
+            for output_batch in self.divide_in_batches(randomised_buffer,
+                                                       index+1,
+                                                       batch_size):
+                yield output_batch, output_batch
 
     def get_nbatches_in_epoch(self):
         """Returns the number of batches that make an epoch
