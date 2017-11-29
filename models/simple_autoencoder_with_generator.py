@@ -185,7 +185,7 @@ class AutoencoderWithGenerator(object):
                                    batch_size=batch_size,
                                    step=step,
                                    section=val_section)
-            val_data = val_generator.generate_samples()
+            val_data = val_generator.generate_samples(randomise=False)
             val_steps = val_generator.get_nbatches_in_epoch()
         else:
             val_data = None
@@ -205,7 +205,8 @@ class AutoencoderWithGenerator(object):
             validation_data=val_data,
             validation_steps=val_steps,
             epochs=epochs,
-            callbacks=callbacks
+            callbacks=callbacks,
+            verbose=1
             )
         if history_file is not None:
             pickle(history.history, history_file)
