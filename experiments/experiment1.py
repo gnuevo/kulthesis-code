@@ -160,6 +160,7 @@ if __name__ == "__main__":
 
     dimension = dargs.dim[0]
     encoded_size = dargs.encoded_size[0]
+    print("encoded size", encoded_size)
 
     activation = dargs.activation[1]
     optimizer = dargs.optimizer[1]
