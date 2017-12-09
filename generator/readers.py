@@ -46,6 +46,38 @@ def Dataset(file, group):
     return dataset
 
 
+def Function(f_to_bind, *args):
+    """Binds to a custom function
+    
+    Similar behaviour to functools.partial. The idea is to froze the *args 
+    section from f_to_bind. f_to_bind have to be of the form
+    
+        f_to_bind(x, *args)
+    
+    where x is a sample, and *args are the additional parameter it may need.
+    For example if we want to add the same number to all our samples we can do
+    
+        add_number(x, number):
+            return x + number
+        
+        # imagine we want to add 2
+        f = Function(add_number, 2)
+        
+        # now you can easily modify the samples by doing
+        new_sample = f(sample)
+    
+    Args:
+        f_to_bind: function of the form
+        *args: extra arguments f_to_bind may need
+
+    Returns: bound function
+
+    """
+    def mock_function(x):
+        return f_to_bind(x, *args)
+    return mock_function()
+
+
 class Reader(object):
     """Creates the samples reading the input dataset (np.array)
 
@@ -89,7 +121,7 @@ class Reader(object):
         self.section = section
         self.buffer_size = buffer_size
 
-    def read_samples(self):
+    def read_samples(self, function=None):
         """Generates samples following the specifications
 
             Returns:
@@ -142,7 +174,10 @@ class Reader(object):
 
             for index in range(0, buffer.shape[0] - sample_length, step):
                 # iterate over all the samples taken from the buffer
-                yield buffer[index:index + sample_length]
+                sample = buffer[index:index + sample_length]
+                if function is not None:
+                    sample = function(sample)
+                yield sample
 
             # prepare old samples to disposal, by doing this, all the samples
             # 'begind' have been used already
