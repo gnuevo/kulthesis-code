@@ -8,6 +8,7 @@ import time
 import os
 import itertools
 from models.simple_autoencoder_with_generator import AutoencoderWithGenerator
+from tensorflow.python.framework.errors_impl import ResourceExhaustedError
 
 class Experiment1(object):
     """Performs a combination of experiments changing parameters over only one
@@ -90,11 +91,24 @@ class Experiment1(object):
                 autoencoder.callback_add_modelcheckpoint(config[
                                                              "model_dir"]+name+".h5py")
 
-            # run autoencoder
-            autoencoder.train_dataset(batch_size=config["batch_size"],
-                                      epochs=config["epochs"],
-                                      step=config["step"],
-                                      validation=config["validation"])
+            everything_ok = False
+            batch_size = config["batch_size"]
+            while not everything_ok:
+                try:
+                    # run autoencoder
+                    autoencoder.train_dataset(batch_size=batch_size,
+                                              epochs=config["epochs"],
+                                              step=config["step"],
+                                              validation=config["validation"])
+                    everything_ok = True
+                except ResourceExhaustedError as e:
+                    # force restart with lower batch_size
+                    everything_ok = False
+                    batch_size -= 10
+                    print("Restarting with batch", batch_size)
+                except Exception as e:
+                    print("Exception detected", type(e), e)
+                    print(e)
 
 
 if __name__ == "__main__":
