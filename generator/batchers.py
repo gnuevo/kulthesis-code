@@ -7,6 +7,7 @@ randomisation may also be applied.
 from random import shuffle
 import numpy as np
 from .readers import Function
+from generator.generatorutils import total_batches
 
 
 class EndOfEpoch(Exception):
@@ -16,6 +17,7 @@ class EndOfEpoch(Exception):
     """
     def __init__(self, message):
         self.message = message
+
 
 class DoubleSynchronisedRandomisedBatcher(object):
     """Batcher that creates batches for both input and output at a time
@@ -40,6 +42,17 @@ class DoubleSynchronisedRandomisedBatcher(object):
             raise ValueError("The sample_length for the readers differ")
         else:
             self.sample_length = input_reader.sample_length
+
+    def get_nbatches_in_epoch(self, ):
+        """Gets the number of batches per epoch
+        
+        Returns:
+
+        """
+        dataset = self.input_reader.dataset._dataset
+        sample_length = self.input_reader.sample_length
+        step = self.input_reader.step
+        batch_size = self.input_reader.
 
     def _divide_in_batches(self, samples, num_samples, batch_size):
         """Organises a list of samples into a list of batches

@@ -124,6 +124,9 @@ class Reader(object):
     def read_samples(self, function=None):
         """Generates samples following the specifications
 
+            Args:
+                function: the function to apply to every sample. Use Function()
+                
             Returns:
                 a generator that generates sample after sample following the 
                 specifications until the end of the dataset is reached.
