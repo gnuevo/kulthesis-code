@@ -43,16 +43,24 @@ class DoubleSynchronisedRandomisedBatcher(object):
         else:
             self.sample_length = input_reader.sample_length
 
-    def get_nbatches_in_epoch(self, ):
-        """Gets the number of batches per epoch
-        
-        Returns:
+    def get_nbatches_in_epoch(self, batch_size):
+        """Returns the number of batches that make an epoch
+
+        The number of batches that make an epoch changes with the 
+        configuration. For example, the step parameter allows the 
+        augmentation of data. This method calculates and returns that number
+
+        Returns: (int) number of batches that make an epoch
 
         """
         dataset = self.input_reader.dataset._dataset
         sample_length = self.input_reader.sample_length
         step = self.input_reader.step
-        batch_size = self.input_reader.
+        section = self.input_reader.get_configuration()["reader:section"]
+        # readers always get their section in the form of 'songs'
+        input_format = "songs"
+        return total_batches(dataset, sample_length, step, batch_size,
+                             section=section, input_format=input_format)
 
     def _divide_in_batches(self, samples, num_samples, batch_size):
         """Organises a list of samples into a list of batches

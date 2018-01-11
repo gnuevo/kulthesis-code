@@ -4,6 +4,7 @@ Readers are code that read samples from the dataset
 """
 import h5py
 import numpy as np
+from generator.generatorutils import song_section_to_chunk_section
 
 
 def flatten_shape(array):
@@ -75,7 +76,7 @@ def Function(f_to_bind, *args):
     """
     def mock_function(x):
         return f_to_bind(x, *args)
-    return mock_function()
+    return mock_function
 
 
 class Reader(object):
@@ -118,8 +119,20 @@ class Reader(object):
         self.sample_length = sample_length
         self.chunk_size = chunk_size
         self.step = step
-        self.section = section
+        self.section = song_section_to_chunk_section(dataset, section)
         self.buffer_size = buffer_size
+
+        self.__configuration = {
+            "reader:dataset": dataset,
+            "reader:sample_length": sample_length,
+            "reader:chunk_size": chunk_size,
+            "reader:step": step,
+            "reader:section": section,
+            "reader:buffer_size": buffer_size
+        }
+
+    def get_configuration(self):
+        return self.__configuration
 
     def read_samples(self, function=None):
         """Generates samples following the specifications

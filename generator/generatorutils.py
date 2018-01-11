@@ -175,6 +175,30 @@ def total_batches(dataset, sample_length, step, batch_size, section=None,
     return n_batches
 
 
+def song_section_to_chunk_section(data, song_section):
+    """Converts a song section into a chunck section
+
+    Sections represent portions of the dataset in a tuple format
+        (start of section, end of section)
+        (start index, end index)
+    but the indexes themselves can represent a song or just a chunk of the 
+    dataset. This fuction gets the former and converts into the latter, 
+    which is the format needed for training.
+
+    Args:
+        data: dataset from which metadata will be retreived
+        song_section: tuple (start index, end index) 
+
+    Returns:
+        (section chunk start index, section chunk end index)
+
+    """
+    songs_lengths = [int(length) for length in data.attrs["songs_lengths"]]
+    start_index = sum(songs_lengths[0:song_section[0]])
+    end_index = sum(songs_lengths[0:song_section[1] + 1])
+    return (start_index, end_index)
+
+
 if __name__ == "__main__":
     print("Main")
     import h5py
