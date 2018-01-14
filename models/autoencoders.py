@@ -13,67 +13,7 @@ from dataset.dataset import Dataset
 from generator.readers import Reader
 from generator.batchers import DoubleSynchronisedRandomisedBatcher as \
     DSRBatcher
-from .simple_autoencoder_with_generator import SimpleAutoencoderGenerator
 from .simple_autoencoder_with_generator import AutoencoderWithGenerator
-
-def SimpleAutoencoder(input_dimension=(1000, 2), encoding_dim=32,
-                         activation='relu', optimizer='adadelta',
-                         loss='binary_crossentropy'):
-    """This function creates and returns a simple autoencoder
-
-    Args:
-        input_dimension (int or tuple of ints): input dimension for the 
-                    network, if it is a tuple the input is flattened to only 
-                    one dimension
-        encoding_dim (int): compressed size
-        activation: activation function
-        optimizer: optimizer
-        loss: loss
-
-    Returns:
-
-    """
-    #FIXME I think this class has never been tried BE CAREFULL
-    if len(input_dimension) > 1:
-        flattened_dimension = (reduce(operator.mul, input_dimension),)
-    else:
-        flattened_dimension = input_dimension
-    # this is the size of our encoded representations
-
-    # this is our input placeholder
-    input_tensor = Input(shape=input_dimension)
-
-    # reshape if necessary, encode
-    if len(input_dimension) > 1:
-        input_reshape = Reshape(flattened_dimension,
-                                input_shape=input_dimension,
-                                name="input_reshape")(
-            input_tensor)
-        encoded = Dense(encoding_dim, activation=activation,
-                        name="encoder")(input_reshape)
-    else:
-        encoded = Dense(encoding_dim, activation=activation,
-                        name="encoder")(
-            input_tensor)
-
-    # decode, reshape if necessary
-    if len(input_dimension) > 1:
-        decoded = Dense(flattened_dimension[0], activation=activation,
-                        name="decoder"
-                        )(encoded)
-        output = Reshape(input_dimension,
-                         input_shape=flattened_dimension,
-                         name="output_reshape")(
-            decoded)
-    else:
-        decoded = Dense(flattened_dimension, activation=activation,
-                        name="decoder")(encoded)
-        output = decoded
-
-    # this model maps an input to its reconstruction
-    autoencoder = Model(input_tensor, output)
-    autoencoder.compile(optimizer=optimizer, loss=loss)
-    return autoencoder
 
 
 class DoubleAutoencoderGenerator(AutoencoderWithGenerator):
