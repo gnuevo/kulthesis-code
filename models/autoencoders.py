@@ -95,7 +95,7 @@ class DoubleAutoencoderGenerator(AutoencoderWithGenerator):
                 network, it is equivalent to sample length
             encoding_dim (int): size of the encoded layer of the autoencoder 
         """
-        self.__input_file =  input_file
+        self.__input_file = input_file
         self.__input_group = input_group
         self.__output_file = output_file
         self.__output_group = output_group

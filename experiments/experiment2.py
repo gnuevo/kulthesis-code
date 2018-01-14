@@ -1,7 +1,7 @@
-"""
-timbre
-window size
-internal size
+""" Experiment 2
+
+Experiment 2 allows to train a network to convert from the timbre of one 
+instrument to another one.
 """
 
 import time
@@ -11,7 +11,7 @@ from models.autoencoders import DoubleAutoencoderGenerator
 from tensorflow.python.framework.errors_impl import ResourceExhaustedError
 
 
-class Experiment1(object):
+class Experiment2(object):
     """Performs a combination of experiments changing parameters over only one
     timbre
 
@@ -42,25 +42,35 @@ class Experiment1(object):
             os.makedirs(directory)
 
     def __create_string(self, input_size, hidden_size, activation,
-                        optimizer, loss, name):
-        string = "input{}_hidden{}_{}_{}_{}_{}".format(input_size, hidden_size,
+                        optimizer, loss):
+        string = "input{}_hidden{}_{}_{}_{}".format(input_size, hidden_size,
                                                     activation, optimizer,
-                                                    loss, name)
+                                                    loss)
         return string
 
     def run_experiment(self):
         config = self.__configuration
 
         current_time = time.strftime("%Y-%m-%d_%H%M%S")
-        print(config["hdf5_file"])
-        file_name = config["hdf5_file"].split("/")[-1].split(".")[-2]
-        name = current_time + "_{}_{}".format(config["hdf5_group"], file_name)
+        print(config["input_file"])
+        file_name = config["input_file"].split("/")[-1].split(".")[-2]
+        name = current_time + "_{input}_{output}_{file}_{id}"\
+            .format(input=config["input_group"],
+                    output=config["output_group"],
+                    file=file_name,
+                    id=config["execution_id"])
 
         # create directories to store the models and tensorboard summaries
         if config["tblogdir"] is not None:
             self.__create_directory(config["tblogdir"] + name)
         if config["model_dir"] is not None:
             self.__create_directory(config["model_dir"] + name)
+
+        # extract variables
+        input_file = config["input_file"]
+        input_group = config["input_group"]
+        output_file = config["output_file"]
+        output_group = config["output_group"]
 
         elements = [self.__configuration["dimension"],
                     self.__configuration["encoded_size"],
@@ -75,11 +85,13 @@ class Experiment1(object):
             string_name = self.__create_string(input_size, hidden_size,
                                                activation, optimizer, loss)
             print(">>>>STRING NAME", string_name)
-            autoencoder = AutoencoderWithGenerator(config["hdf5_file"],
-                                                   config["hdf5_group"],
-                                                   input_dimension=(
-                                                   input_size, 2),
-                                                   encoding_dim=hidden_size)
+            autoencoder = DoubleAutoencoderGenerator(input_file,
+                                                     input_group,
+                                                     output_file,
+                                                     output_group,
+                                                     input_dimension=(
+                                                         input_size, 2),
+                                                     encoding_dim=hidden_size)
 
             if config["tblogdir"] is not None:
                 autoencoder.callback_add_tensorboard(
@@ -115,17 +127,37 @@ class Experiment1(object):
                     print(e)
 
 
+def parse_file_group(string):
+    file = string.split(':')[0]
+    group = string.split(':')[1]
+    return file, group
+
+
+def get_argument_multiple(argument):
+    if len(argument) == 2:
+        arg = argument[1]
+    elif len(argument) == 1:
+        arg = argument
+    else:
+        print("ERROR in the argument", argument)
+    return arg
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Help for the big experiment, it is intended to execute a"
-                    "series of combinations for only one timbre")
+        description="Help for the big experiment2. Trains the network to "
+                    "change the timbre from input instrument to output "
+                    "instrument")
     # arguments for gather_dataset_online
     # define dataset
-    parser.add_argument("hdf5_file", help="File containing the dataset file",
+    parser.add_argument("input_group", help="Input file and group with the "
+                                            "following format file:group",
                         type=str)
-    parser.add_argument("--hdf5-group", help="Group name with the dataset",
+
+    parser.add_argument("output_group", help="Output file and group with the "
+                                            "following format file:group",
                         type=str)
 
     # define model
@@ -141,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("--optimizer",
                         help="Desired optimizer, or list of them",
                         type=str, action='append', nargs='*',
-                        default=['adadelta'])
+                        default=['adam'])
     parser.add_argument("--loss",
                         help="Desired loss, or list of them",
                         type=str, action='append', nargs='*',
@@ -172,18 +204,27 @@ if __name__ == "__main__":
                                                           "stopping callback with the specified patience",
                         type=int, default=None)
 
+    # others
+    parser.add_argument("--identifier", "--id", help="Name of the execution, "
+                                              "helps to "
+                                     "organise them", type=str, default="")
+
     dargs = parser.parse_args()
 
-    hdf5_file = dargs.hdf5_file
-    hdf5_group = dargs.hdf5_group
+    input_file, input_group = parse_file_group(dargs.input_group)
+    output_file, output_group = parse_file_group(dargs.output_group)
 
     dimension = dargs.dim[0]
     encoded_size = dargs.encoded_size[0]
     print("encoded size", encoded_size)
 
-    activation = dargs.activation[1]
-    optimizer = dargs.optimizer[1]
-    loss = dargs.loss[1]
+    print(dargs.activation)
+    print(dargs.optimizer)
+    print(dargs.loss)
+    activation = get_argument_multiple(dargs.activation)
+    optimizer = get_argument_multiple(dargs.optimizer)
+    loss = get_argument_multiple(dargs.loss)
+    print(activation, optimizer, loss)
 
     batch_size = dargs.batch
     step = dargs.step
@@ -194,8 +235,10 @@ if __name__ == "__main__":
     validation = dargs.validate
 
     config = {
-        "hdf5_file": hdf5_file,
-        "hdf5_group": hdf5_group,
+        "input_file": input_file,
+        "input_group": input_group,
+        "output_file": output_file,
+        "output_group": output_group,
         "dimension": dimension,
         "encoded_size": encoded_size,
         "activation": activation,
@@ -208,8 +251,9 @@ if __name__ == "__main__":
         "tbbatch_freq": batch_freq,
         "model_dir": dargs.model_dir,
         "early_stopping_patience": dargs.early_stopping_patience,
-        "validation": validation
+        "validation": validation,
+        "execution_id": dargs.identifier
     }
 
-    experiment = Experiment1(config)
+    experiment = Experiment2(config)
     experiment.run_experiment()

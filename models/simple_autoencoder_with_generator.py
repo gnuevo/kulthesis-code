@@ -58,6 +58,9 @@ class AutoencoderWithGenerator(object):
                           activation=activation, optimizer=optimizer,
                           loss=loss)
 
+    def _culo(self):
+        print("culo")
+
     def __initialise(self, input_dimension=(1000, 2), encoding_dim=32,
                      activation='relu', optimizer='adadelta',
                      loss='binary_crossentropy'):
