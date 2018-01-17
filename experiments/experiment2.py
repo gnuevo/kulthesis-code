@@ -92,6 +92,7 @@ class Experiment2(object):
                                                      input_dimension=(
                                                          input_size, 2),
                                                      encoding_dim=hidden_size)
+            autoencoder.initialise(activation, optimizer, loss)
 
             if config["tblogdir"] is not None:
                 autoencoder.callback_add_tensorboard(
@@ -122,9 +123,9 @@ class Experiment2(object):
                     everything_ok = False
                     batch_size -= 10
                     print("Restarting with batch", batch_size)
-                except Exception as e:
-                    print("Exception detected", type(e), e)
-                    print(e)
+                # except Exception as e:
+                #     print("Exception detected", type(e), e)
+                #     print(e)
 
 
 def parse_file_group(string):

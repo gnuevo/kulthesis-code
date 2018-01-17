@@ -15,7 +15,7 @@ class EndOfEpoch(Exception):
     processing the entire dataset, i.e. the epoch is complete
     
     """
-    def __init__(self, message):
+    def __init__(self, message=""):
         self.message = message
 
 
@@ -27,7 +27,7 @@ class DoubleSynchronisedRandomisedBatcher(object):
     that is why synchronised.
     
     """
-    def __init__(self, input_reader, output_reader, buffer_size=10000):
+    def __init__(self, input_reader, output_reader, buffer_size=1000):
         """Initialised the batcher
         
         Args:
@@ -53,7 +53,8 @@ class DoubleSynchronisedRandomisedBatcher(object):
         Returns: (int) number of batches that make an epoch
 
         """
-        dataset = self.input_reader.dataset._dataset
+        print(type(self.input_reader.dataset))
+        dataset = self.input_reader.dataset
         sample_length = self.input_reader.sample_length
         step = self.input_reader.step
         section = self.input_reader.get_configuration()["reader:section"]
@@ -98,6 +99,9 @@ class DoubleSynchronisedRandomisedBatcher(object):
         # calculate the number of batches that fit in the buffer
         batches_in_buffer = self.buffer_size // batch_size
         # create array to store the batch
+        print("SIZE OF THE BUFFER")
+        print((batches_in_buffer * batch_size, \
+                                    self.sample_length, 2))
         input_buffer_features = np.zeros((batches_in_buffer * batch_size, \
                                     self.sample_length, 2))#FIXME, hardcoded 2
         output_buffer_features = np.zeros((batches_in_buffer * batch_size, \
@@ -113,7 +117,7 @@ class DoubleSynchronisedRandomisedBatcher(object):
                     output_sample = next(output_gen)
                 except StopIteration:
                     # raise exception in case this would be useful
-                    raise EndOfEpoch
+                    # raise EndOfEpoch()
                     input_gen = self.input_reader.read_samples(function=function)
                     output_gen = self.output_reader.read_samples(function=function)
                     # when buffers are full, break and return samples

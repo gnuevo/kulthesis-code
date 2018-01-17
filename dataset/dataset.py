@@ -14,7 +14,6 @@ class DatasetFormatError(Exception):
 class Dataset(object):
     def __init__(self, dataset_file, mode='r'):
         self._dataset = h5py.File(dataset_file, mode)
-        self.chunk_size
 
     def group(self, group_name):
         return Group(self._dataset[group_name])
@@ -34,12 +33,12 @@ class Dataset(object):
 class Group(object):
     def __init__(self, group):
         self._group = group
-        metadata = json.loads(group.attrs["metadata"])
+        metadata = json.loads(group["data"].attrs["metadata"])
         self.chunk_size = metadata['chunk_size']
         self.nsongs = metadata["Nsongs"]
 
     def data(self):
-        return self._group.data
+        return self._group["data"]
 
     def total_batches(self, sample_length, step, batch_size, section=None,
                       input_format="chunks"):

@@ -11,7 +11,7 @@ from functools import reduce
 import operator
 
 
-def SimpleAutoencoder(input_dimension=(1000, 2), encoding_dim=32,
+def SimpleAutoencoderNetwork(input_dimension=(1000, 2), encoding_dim=32,
                  activation='relu', optimizer='adadelta',
                  loss='binary_crossentropy'):
     """Initialises the neural network

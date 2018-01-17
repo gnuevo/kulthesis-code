@@ -147,6 +147,8 @@ class Reader(object):
         # extract object variables to local variables
         if self.section == None or not type(self.section) == tuple:
             section = (0, len(self.dataset))
+        else:
+            section = self.section
         start_of_section = section[0]
         end_of_section = section[1]
 
