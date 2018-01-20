@@ -176,7 +176,7 @@ def total_batches(dataset, sample_length, step, batch_size, section=None,
 
 
 def song_section_to_chunk_section(data, song_section):
-    """Converts a song section into a chunck section
+    """Converts a song section into a chunk section
 
     Sections represent portions of the dataset in a tuple format
         (start of section, end of section)
@@ -187,7 +187,7 @@ def song_section_to_chunk_section(data, song_section):
 
     Args:
         data: dataset from which metadata will be retreived
-        song_section: tuple (start index, end index) 
+        song_section: tuple (start index, end index+1) 
 
     Returns:
         (section chunk start index, section chunk end index)
@@ -195,7 +195,7 @@ def song_section_to_chunk_section(data, song_section):
     """
     songs_lengths = [int(length) for length in data.attrs["songs_lengths"]]
     start_index = sum(songs_lengths[0:song_section[0]])
-    end_index = sum(songs_lengths[0:song_section[1] + 1])
+    end_index = sum(songs_lengths[0:song_section[1]])
     return (start_index, end_index)
 
 

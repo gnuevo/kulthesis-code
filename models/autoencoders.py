@@ -177,10 +177,11 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         self._output_group = output_group
         self._input_dimension = input_dimension
         self._encoding_dim = encoding_dim
+        #FIXME, check next if, I think it' always input_dimension[0]
         if len(input_dimension) >= 2:
             self._sample_length = input_dimension[0]
         elif len(input_dimension) == 1:
-            self._sample_length = input_dimension
+            self._sample_length = input_dimension[0]
 
     def create_generator(self, input_file, input_group,
                          output_file, output_group, sample_length,
@@ -203,13 +204,22 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         input_dataset = Dataset(input_file)
         output_dataset = Dataset(output_file)
 
+        # use of new DatasetSection
+        g_input = input_dataset.group(input_group)
+        g_output = output_dataset.group(output_group)
+        input_datasection = g_input.get_section(section, stereo=False,
+                                                    channel=0)
+        output_datasection = g_output.get_section(section, stereo=False,
+                                                      channel=0)
+
+        print("---section", section, len(output_datasection))
         # create readers
-        input_reader = Reader(input_dataset.group(input_group).data(),
-                              sample_length, input_dataset.group(
-                input_group).chunk_size, step, section)
-        output_reader = Reader(output_dataset.group(output_group).data(),
-                               sample_length, output_dataset.group(
-                output_group).chunk_size, step, section)
+        input_reader = Reader(input_datasection, sample_length,
+                              g_input.chunk_size,
+                              step=step, section=section)
+        output_reader = Reader(output_datasection, sample_length,
+                               g_output.chunk_size,
+                               step=step, section=section)
 
         # create batcher
         batcher = DSRBatcher(input_reader, output_reader)
@@ -292,6 +302,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         #         exit()
         train_steps = train_generator.get_nbatches_in_epoch(batch_size)
         print(train_generator.get_nbatches_in_epoch(batch_size))
+        for layer in self._network.layers:
+            print(layer)
         history = self._network.fit_generator(
             train_data,
             train_steps,
@@ -324,6 +336,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         train_section = tuple(train_section)
         print("Train section (in songs format)", train_section)
 
+        # get info about the validation section
         if validation:
             val_section = data.attrs["val_set"]
             val_section = tuple(val_section)

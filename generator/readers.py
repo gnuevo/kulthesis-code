@@ -96,7 +96,7 @@ class Reader(object):
         dataset may be ignored.
         """
     def __init__(self, dataset, sample_length, chunk_size, step=None,
-                 section=None, buffer_size=100000):
+                 section=None, buffer_size=500000):
         """Initialises the object and sets the necessary values
         
         Args:
@@ -119,7 +119,10 @@ class Reader(object):
         self.sample_length = sample_length
         self.chunk_size = chunk_size
         self.step = step
-        self.section = song_section_to_chunk_section(dataset, section)
+        #FIXME, now no section is provided, the same behaviour is achieved
+        # using DataSection
+        # self.section = song_section_to_chunk_section(dataset, section)
+        self.section = None
         self.buffer_size = buffer_size
 
         self.__configuration = {
@@ -133,6 +136,18 @@ class Reader(object):
 
     def get_configuration(self):
         return self.__configuration
+
+    def sample_shape(self):
+        """Returns the shape of the sample
+        
+        Basically helps to distinguish samples that are stereo from samples 
+        that are mono
+        """
+        shape = [self.sample_length]
+        print("shape", shape)
+        shape.extend(list(self.dataset.shape[2:]))
+        print("shape", shape)
+        return tuple(shape)
 
     def read_samples(self, function=None):
         """Generates samples following the specifications
@@ -167,7 +182,6 @@ class Reader(object):
         chunks_in_buffer = buffer_size // chunk_size - chunk_size // \
                                                        sample_length - 1
 
-
         buffer = dataset[start_of_section]  # load first chunk
         bottom_index = start_of_section + 1  # +1 because the first chunk (
         # start_of_section) was read already
@@ -189,7 +203,6 @@ class Reader(object):
             buffer = np.concatenate((buffer[step_index:], new_read_data),
                                     axis=0)
             step_index = 0
-
             for index in range(0, buffer.shape[0] - sample_length, step):
                 # iterate over all the samples taken from the buffer
                 sample = buffer[index:index + sample_length]

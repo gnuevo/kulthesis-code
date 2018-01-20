@@ -84,13 +84,16 @@ class Experiment2(object):
         for input_size, hidden_size, activation, optimizer, loss in all_combinations:
             string_name = self.__create_string(input_size, hidden_size,
                                                activation, optimizer, loss)
+            if config["stereo"]:
+                input_shape = (input_size, 2)
+            else:
+                input_shape = (input_size,)
             print(">>>>STRING NAME", string_name)
             autoencoder = DoubleAutoencoderGenerator(input_file,
                                                      input_group,
                                                      output_file,
                                                      output_group,
-                                                     input_dimension=(
-                                                         input_size, 2),
+                                                     input_dimension=input_shape,
                                                      encoding_dim=hidden_size)
             autoencoder.initialise(activation, optimizer, loss)
 
@@ -106,7 +109,7 @@ class Experiment2(object):
 
             if config["model_dir"] is not None:
                 autoencoder.callback_add_modelcheckpoint(config[
-                                                             "model_dir"] + name + ".h5py")
+                                                             "model_dir"] + name + ".h5")
 
             everything_ok = False
             batch_size = config["batch_size"]
@@ -179,6 +182,8 @@ if __name__ == "__main__":
                         help="Desired loss, or list of them",
                         type=str, action='append', nargs='*',
                         default=['binary_crossentropy'])
+    parser.add_argument("--stereo", help="Stereo audio instead of mono",
+                        action="store_true")
 
     # execution
     parser.add_argument("--batch", help="Batch size", type=int, default=10000)
@@ -230,6 +235,10 @@ if __name__ == "__main__":
     batch_size = dargs.batch
     step = dargs.step
     epochs = dargs.epochs
+    stereo = dargs.stereo
+    if stereo:
+        print("ATTENTION! don't use --stereo, it's note implemented yet")
+        exit(-1)
 
     log_dir = dargs.tblogdir
     batch_freq = dargs.tbbatchfreq
@@ -253,7 +262,8 @@ if __name__ == "__main__":
         "model_dir": dargs.model_dir,
         "early_stopping_patience": dargs.early_stopping_patience,
         "validation": validation,
-        "execution_id": dargs.identifier
+        "execution_id": dargs.identifier,
+        "stereo": stereo
     }
 
     experiment = Experiment2(config)

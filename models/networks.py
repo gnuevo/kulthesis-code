@@ -57,7 +57,7 @@ def SimpleAutoencoderNetwork(input_dimension=(1000, 2), encoding_dim=32,
                          name="output_reshape")(
             decoded)
     else:
-        decoded = Dense(flattened_dimension, activation=activation,
+        decoded = Dense(flattened_dimension[0], activation=activation,
                         name="decoder")(encoded)
         output = decoded
 

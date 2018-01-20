@@ -102,11 +102,17 @@ class DoubleSynchronisedRandomisedBatcher(object):
         print("SIZE OF THE BUFFER")
         print((batches_in_buffer * batch_size, \
                                     self.sample_length, 2))
-        input_buffer_features = np.zeros((batches_in_buffer * batch_size, \
-                                    self.sample_length, 2))#FIXME, hardcoded 2
-        output_buffer_features = np.zeros((batches_in_buffer * batch_size, \
-                                          self.sample_length,
-                                          2))  # FIXME, hardcoded 2
+        buffer_size = batches_in_buffer * batch_size
+        sample_shape = self.input_reader.sample_shape()
+        print("sample shape", sample_shape)
+        print("type buffer size", type(buffer_size), buffer_size)
+        buffer_shape = [buffer_size]
+        print("")
+        buffer_shape.extend(list(sample_shape))
+        buffer_shape = tuple(buffer_shape)
+        print("buffer shape", buffer_shape)
+        input_buffer_features = np.zeros(buffer_shape)
+        output_buffer_features = np.zeros(buffer_shape)
 
         input_gen = self.input_reader.read_samples(function=function)
         output_gen = self.output_reader.read_samples(function=function)

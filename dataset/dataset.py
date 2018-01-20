@@ -90,8 +90,32 @@ class Group(object):
         print("Total number of batches", n_batches)
         return n_batches
 
+    def get_section(self, section, stereo=False, channel=0):
+        """Returns a section of the dataset wrapped into a DataSection object
+        
+        Args:
+            section: tuple (start_section, stop_section)
 
-class DatasetSection(Sequence):
+        Returns:
+
+        """
+        return DataSection(self._group["data"], section=section,
+                           section_format="songs", stereo=stereo, channel=channel)
+
+    def get_train_section(self, stereo=False, channel=0):
+        return self._get_section(self.data().attrs["train_set"],
+                                 stereo=stereo, channel=channel)
+
+    def get_val_section(self, stereo=False, channel=0):
+        return self._get_section(self.data().attrs["val_set"],
+                                 stereo=stereo, channel=channel)
+
+    def get_test_section(self, stereo=False, channel=0):
+        return self._get_section(self.data().attrs["test_set"],
+                                 stereo=stereo, channel=channel)
+
+
+class DataSection(Sequence):
     """Encapsulates a section of the dataset with a Sequence easy access API
     
     The idea behind this is that the DataSection object reads chunks at a 
@@ -116,10 +140,13 @@ class DatasetSection(Sequence):
             channel: channel you want to get if stereo=False and data is stereo
         """
         self._group_data = group_data
+        print("DataSection data shape", group_data.shape)
+        self.chunk_size = self._group_data.shape[1]
+        self.attrs = self._group_data.attrs
+        self.shape = self._group_data.shape
         if section == None:
             self._start_section = 0
-            self._stop_section = group_data # FIXME, I think this is
-            # wrong, len() - 1?
+            self._stop_section = len(group_data)
         else:
             if section_format == "songs":
                 chunk_section = song_section_to_chunk_section(group_data,
@@ -132,20 +159,23 @@ class DatasetSection(Sequence):
             else:
                 raise ValueError("section_format must be either 'songs' or "
                                  "'chunks', gotten", section_format)
+        print("DataSection start stop of section,", self._start_section,
+              self._stop_section)
 
         # create a filter function to extract the desired channel(s)
         if stereo == True:
-            self._filter = lambda x: x
+            self._channel_filter = slice(None, None, None)
+            self.shape = self._group_data.shape
         elif stereo == False:
             if type(channel) == int and channel < self._group_data.shape[-1]:
                 # return the selected channel
-                self._filter = lambda x: x[:, channel]
+                self._channel_filter = channel
+                self.shape = self._group_data.shape[:-1] # ignore last
             else:
                 raise ValueError("channel is not <int> or is out of range, "
                                  "channel=", channel)
 
     def __len__(self):
-        # FIXME, I'm not sure this is the correct function
         return self._stop_section - self._start_section
 
     def __getitem__(self, item):
@@ -154,10 +184,13 @@ class DatasetSection(Sequence):
         if type(item) == int:
             item += self._start_section
         elif type(item) == slice:
-            item.start += self._start_section
-            item.stop += self._start_section
+            start = item.start + self._start_section
+            stop = item.stop + self._start_section
+            step = item.step
+            item = slice(start, stop, step)
         else:
             raise TypeError("Item type is not <int> nor <slice>, type",
                             type(item))
-        retrieved = self._group_data[item]
-        return self._filter(retrieved)
+        retrieved = self._group_data[item, :, self._channel_filter]
+        filtered = retrieved
+        return filtered
