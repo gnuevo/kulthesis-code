@@ -27,7 +27,7 @@ class DoubleSynchronisedRandomisedBatcher(object):
     that is why synchronised.
     
     """
-    def __init__(self, input_reader, output_reader, buffer_size=1000):
+    def __init__(self, input_reader, output_reader, buffer_size=2000):
         """Initialised the batcher
         
         Args:
