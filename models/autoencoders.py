@@ -284,22 +284,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                            section=train_section)
         train_data = train_generator.generate_batches(batch_size=batch_size,
                                                       randomise=True)
-        # print("Shiiiiit")
-        # i = 10
-        # print(self._network)
-        # for input_batch, output_batch in train_data:
-        #     print("batch dimensions", input_batch.shape, output_batch.shape)
-        #     print("input batch == output batch??", input_batch==output_batch)
-        #     i -= 1
-        #     if i == 0:
-        #         exit()
-        # count = 10
-        # print("Printing samples")
-        # for e in train_data:
-        #     print("A sample", e)
-        #     count -= 1
-        #     if count == 0:
-        #         exit()
+
         train_steps = train_generator.get_nbatches_in_epoch(batch_size)
         print(train_generator.get_nbatches_in_epoch(batch_size))
         for layer in self._network.layers:
