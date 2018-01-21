@@ -333,3 +333,62 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         self.fit_generator(batch_size=batch_size, epochs=epochs, step=step,
                            train_section=train_section,
                            val_section=val_section, history_file=history_file)
+
+
+    def evaluate_generator(self, evaluate_section=None, batch_size=100, \
+                                                                step=None):
+        """
+        
+        Args:
+            evaluate_section: 
+            batch_size: 
+            step: step to generate samples (do not confuse with `steps` from
+                model.evaluate_generator(steps=...)
+
+        Returns:
+
+        """
+        if step == None: step = self._input_dimension[0]
+
+        # callbacks = self._callbacks if not self._callbacks == [] else None
+
+        test_generator = self.create_generator(self._input_file,
+                                           self._input_group,
+                                           self._output_file,
+                                           self._output_group,
+                                           sample_length=self._sample_length,
+                                           step=step,
+                                           section=evaluate_section)
+        test_data = test_generator.generate_batches(batch_size=batch_size,
+                                                      randomise=True)
+
+        train_steps = test_generator.get_nbatches_in_epoch(batch_size)
+        for layer in self._network.layers:
+            print(layer)
+        evaluation = self._network.evaluate_generator(
+            test_data,
+            steps=train_steps
+            )
+        return evaluation
+
+
+    def test_dataset(self, batch_size=100, step=None):
+        """Tests the dataset
+        
+        Args:
+            batch_size: 
+            step: 
+
+        Returns:
+
+        """
+        if step == None: step = self._input_dimension[0]
+
+        # get info on the test section
+        data = Dataset(self._input_file).group(self._input_group).data()
+        test_section = data.attrs["test_set"]
+        test_section = tuple(test_section)
+
+        # test
+        return self.evaluate_generator(evaluate_section=test_section,
+                                       batch_size=batch_size, step=step)

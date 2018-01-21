@@ -129,6 +129,15 @@ class Experiment2(object):
                 # except Exception as e:
                 #     print("Exception detected", type(e), e)
                 #     print(e)
+            # do test
+            # FIXME, you should not pay attention to this part unless it's
+            # the model you have selected, otherwise you're overfitting
+            if config["test"]:
+                test_error = autoencoder.test_dataset(batch_size=batch_size,
+                                               step=step)
+                print("Network:", input_size, hidden_size, activation, optimizer, loss)
+                print("\tFor step =", step, "batch_size =", batch_size)
+                print("\tHas test error", test_error)
 
 
 def parse_file_group(string):
@@ -192,9 +201,11 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--epochs", help="The number of epochs to "
                                                "compute", type=int, default=1)
 
-    # validation
+    # validation and test
     parser.add_argument("--validate", help="Performs validation after each "
                                            "epoch", action="store_true")
+    parser.add_argument("--test", help="Performs test after training is "
+                                       "finished", action="store_true")
 
     # callbacks
     parser.add_argument("--tblogdir", help="logdir of tensorboard",
@@ -243,6 +254,7 @@ if __name__ == "__main__":
     log_dir = dargs.tblogdir
     batch_freq = dargs.tbbatchfreq
     validation = dargs.validate
+    test = dargs.test
 
     config = {
         "input_file": input_file,
@@ -262,6 +274,7 @@ if __name__ == "__main__":
         "model_dir": dargs.model_dir,
         "early_stopping_patience": dargs.early_stopping_patience,
         "validation": validation,
+        "test": test,
         "execution_id": dargs.identifier,
         "stereo": stereo
     }
