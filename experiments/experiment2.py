@@ -139,6 +139,8 @@ class Experiment2(object):
                 print("\tFor step =", step, "batch_size =", batch_size)
                 print("\tHas test error", test_error)
 
+            autoencoder.recover_audio(batch_size=batch_size)
+
 
 def parse_file_group(string):
     file = string.split(':')[0]

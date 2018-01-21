@@ -200,6 +200,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
         Returns:
         """
+        if step == None: step = self._input_dimension[0]
+
         # get datasets
         input_dataset = Dataset(input_file)
         output_dataset = Dataset(output_file)
@@ -392,3 +394,34 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         # test
         return self.evaluate_generator(evaluate_section=test_section,
                                        batch_size=batch_size, step=step)
+
+    def recover_audio(self, batch_size=100):
+        """Function to recover the audio samples using tensorboard audio 
+        summary
+        
+        Returns:
+
+        """
+
+        # get info on the test section
+        data = Dataset(self._input_file).group(self._input_group).data()
+        test_section = data.attrs["test_set"]
+        test_section = tuple(test_section)
+
+        test_generator = self.create_generator(self._input_file,
+                                              self._input_group,
+                                              self._output_file,
+                                              self._output_group,
+                                              sample_length=self._sample_length,
+                                              step=None,
+                                              section=test_section)
+        test_data = test_generator.generate_batches(batch_size=batch_size,
+                                                    randomise=False)
+        test_steps = test_generator.get_nbatches_in_epoch(batch_size=batch_size)
+
+        def generator_filter():
+            for elem in test_data:
+                yield elem[0]
+        prediction = self._network.predict_generator(generator_filter(),
+                                                     test_steps)
+        print("Looks good for now!!")
