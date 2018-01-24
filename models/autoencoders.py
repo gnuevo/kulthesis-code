@@ -15,6 +15,8 @@ from generator.batchers import DoubleSynchronisedRandomisedBatcher as \
     DSRBatcher
 from keras.callbacks import TensorBoard
 from .networks import SimpleAutoencoderNetwork
+import tensorflow as tf
+import numpy as np
 
 
 class AutoencoderSkeleton(object):
@@ -395,7 +397,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         return self.evaluate_generator(evaluate_section=test_section,
                                        batch_size=batch_size, step=step)
 
-    def recover_audio(self, batch_size=100):
+    def recover_audio(self, batch_size=100, tblogdir="/tmp/autoencoder"):
         """Function to recover the audio samples using tensorboard audio 
         summary
         
@@ -406,6 +408,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         # get info on the test section
         data = Dataset(self._input_file).group(self._input_group).data()
         test_section = data.attrs["test_set"]
+        song_lengths = data.attrs["songs_lengths"]
         test_section = tuple(test_section)
 
         test_generator = self.create_generator(self._input_file,
@@ -424,4 +427,37 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                 yield elem[0]
         prediction = self._network.predict_generator(generator_filter(),
                                                      test_steps)
+        print("type prediction", type(prediction))
+        print("shape of prediction", prediction.shape)
         print("Looks good for now!!")
+
+        test_data = test_generator.generate_batches(batch_size=batch_size,
+                                                    randomise=False)
+        print("here")
+        def generator_filter():
+            for elem in test_data:
+                yield elem[0]
+
+        print("here")
+        t_data = np.ndarray([])
+        print("here")
+        for _ in range(song_lengths[0]):
+            new_data = next(generator_filter())
+            t_data = np.append(t_data, new_data)
+        print("shape t_data", t_data)
+        # working with tensorboard stuff
+        tb_writer = tf.summary.FileWriter(tblogdir)
+        t_data = test_data[:song_lengths[0]]
+        p_data = prediction[:song_lengths[0]]
+        flattened_shape = t_data.shape[0] * t_data.shape[1]
+        t_data = np.reshape(t_data, flattened_shape)
+        p_data = np.reshape(p_data, flattened_shape)
+
+        t_audio_summary = tf.summary.audio("original0", t_data, 16050, 1)
+        p_audio_summary = tf.summary.audio("predicted0", p_data, 16050, 1)
+        tb_writer.add_summary(t_audio_summary, 0)
+        tb_writer.add_summary(p_audio_summary, 0)
+        tb_writer.flush()
+        tb_writer.close()
+        print("If this is printed on the screen, check tensorboard and look "
+              "for the audio")
