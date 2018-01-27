@@ -8,6 +8,7 @@ from random import shuffle
 import numpy as np
 from .readers import Function
 from generator.generatorutils import total_batches
+from dataset.dataset import DataSection, StandarizedDataSection
 
 
 class EndOfEpoch(Exception):
@@ -57,7 +58,13 @@ class DoubleSynchronisedRandomisedBatcher(object):
         dataset = self.input_reader.dataset
         sample_length = self.input_reader.sample_length
         step = self.input_reader.step
-        section = self.input_reader.get_configuration()["reader:section"]
+        #FIXME the next line is for compatibility,
+        # only DataSection or StandarizedDataSection should be used now
+        if type(dataset) in (DataSection, StandarizedDataSection):
+            print("New part of get n batches    ")
+            section = None
+        else:
+            section = self.input_reader.get_configuration()["reader:section"]
         # readers always get their section in the form of 'songs'
         input_format = "songs"
         return total_batches(dataset, sample_length, step, batch_size,

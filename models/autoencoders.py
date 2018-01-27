@@ -212,9 +212,9 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         g_input = input_dataset.group(input_group)
         g_output = output_dataset.group(output_group)
         input_datasection = g_input.get_section(section, stereo=False,
-                                                    channel=0)
+                                                    channel=0).standarized()
         output_datasection = g_output.get_section(section, stereo=False,
-                                                      channel=0)
+                                                      channel=0).standarized()
 
         print("---section", section, len(output_datasection))
         # create readers

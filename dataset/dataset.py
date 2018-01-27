@@ -6,6 +6,7 @@ import math
 import json
 from collections import Sequence
 from generator.generatorutils import song_section_to_chunk_section
+import numpy as np
 
 
 class DatasetFormatError(Exception):
@@ -139,11 +140,11 @@ class DataSection(Sequence):
             stereo: if you want to treat data as stereo or mono
             channel: channel you want to get if stereo=False and data is stereo
         """
-        self._group_data = group_data
+        self.group_data = group_data
         print("DataSection data shape", group_data.shape)
-        self.chunk_size = self._group_data.shape[1]
-        self.attrs = self._group_data.attrs
-        self.shape = self._group_data.shape
+        self.chunk_size = self.group_data.shape[1]
+        self.attrs = self.group_data.attrs
+        self.shape = self.group_data.shape
         if section == None:
             self._start_section = 0
             self._stop_section = len(group_data)
@@ -165,12 +166,12 @@ class DataSection(Sequence):
         # create a filter function to extract the desired channel(s)
         if stereo == True:
             self._channel_filter = slice(None, None, None)
-            self.shape = self._group_data.shape
+            self.shape = self.group_data.shape
         elif stereo == False:
-            if type(channel) == int and channel < self._group_data.shape[-1]:
+            if type(channel) == int and channel < self.group_data.shape[-1]:
                 # return the selected channel
                 self._channel_filter = channel
-                self.shape = self._group_data.shape[:-1] # ignore last
+                self.shape = self.group_data.shape[:-1] # ignore last
             else:
                 raise ValueError("channel is not <int> or is out of range, "
                                  "channel=", channel)
@@ -191,6 +192,91 @@ class DataSection(Sequence):
         else:
             raise TypeError("Item type is not <int> nor <slice>, type",
                             type(item))
-        retrieved = self._group_data[item, :, self._channel_filter]
+        retrieved = self.group_data[item, :, self._channel_filter]
         filtered = retrieved
         return filtered
+
+    def standarized(self):
+        """Returns a standarised version of itself by wrapping it in
+        StandarizedDataSection
+        
+        Returns:
+
+        """
+        return StandarizedDataSection(self)
+
+    def __iter__(self):
+        self.__iter_index = 0
+        print("len self", len(self))
+        return self
+
+    def __next__(self):
+        if self.__iter_index < len(self):
+            element = self[self.__iter_index]
+            self.__iter_index += 1
+            return element
+        else:
+            raise StopIteration()
+
+
+class StandarizedDataSection(object):
+    """Standarises data from a DataSection object
+    
+    It wraps an instance of DataSection to perform standarisation on the fly
+    Basically it just computes the following operation on data x
+    
+        normalised = (x - x.min())/(x.max() - x.min())
+        # normalised is between 0 and 1
+        standarised = (normalised - 0.5) * 2
+        # standarised is between -1 and +1
+    """
+
+    def __init__(self, data_section):
+        """
+        
+        Args:
+            data_section: instance of DataSection to be wrapped 
+        """
+        self._data_section = data_section
+        self.shape = self._data_section.shape
+        self.attrs = self._data_section.attrs
+        print("data section shape", data_section.shape)
+
+        # current_min = np.amin(self._data_section[0], axis=0)
+        # current_max = np.amax(self._data_section[0], axis=0)
+        # # find global minimum and maximum
+        # print("len datasection", len(data_section))
+        # print("last value", data_section[len(data_section)-1])
+        # print("looking for minimum and maximum")
+        # import sys
+        # i = 0
+        # print("")
+        # for chunk in self._data_section:
+        #     sys.stdout.write("{}".format(i))
+        #     sys.stdout.flush()
+        #     sys.stdout.write("\r")
+        #     i +=1
+        #     current_max = max(current_max, np.amax(chunk, axis=0))
+        #     current_min = min(current_min, np.amin(chunk, axis=0))
+        # self._max = current_max
+        # self._min = current_min
+        self._max = data_section.group_data.attrs['train_max']
+        self._min = data_section.group_data.attrs['train_min']
+        # print("----------------------found them!!", current_min, current_max)
+
+    def __len__(self):
+        return  len(self._data_section)
+
+    def __getitem__(self, item):
+        """Gets data but normalises it before returning it
+        
+        Args:
+            item: 
+
+        Returns:
+
+        """
+        raw_value = self._data_section[item]
+        normalised = (raw_value - self._min)/(self._max - self._min)
+        standarised = (normalised - 0.5) * 2.0
+        return standarised
