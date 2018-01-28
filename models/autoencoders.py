@@ -17,7 +17,7 @@ from keras.callbacks import TensorBoard
 from .networks import SimpleAutoencoderNetwork
 import tensorflow as tf
 import numpy as np
-
+import scipy.io.wavfile as wavfile
 
 class AutoencoderSkeleton(object):
     """Contains basic functionality common to all autoencoders
@@ -433,30 +433,47 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
         test_data = test_generator.generate_batches(batch_size=batch_size,
                                                     randomise=False)
-        print("here")
         def generator_filter():
             for elem in test_data:
                 yield elem[0]
 
-        print("here")
         t_data = np.ndarray([])
-        print("here")
         for _ in range(song_lengths[0]):
             new_data = next(generator_filter())
             t_data = np.append(t_data, new_data)
-        print("shape t_data", t_data)
+        print("shape t_data", t_data.shape)
         # working with tensorboard stuff
         tb_writer = tf.summary.FileWriter(tblogdir)
-        t_data = test_data[:song_lengths[0]]
-        p_data = prediction[:song_lengths[0]]
-        flattened_shape = t_data.shape[0] * t_data.shape[1]
-        t_data = np.reshape(t_data, flattened_shape)
-        p_data = np.reshape(p_data, flattened_shape)
+        p_data = prediction
+        print("p_data shape", p_data.shape)
+        # flattened_shape = t_data.shape[0] * t_data.shape[1]
+        flattened_shape = t_data.shape[0]
+        print("flattened shape", flattened_shape)
+        p_data = np.reshape(p_data, p_data.shape[0] * p_data.shape[1])
 
-        t_audio_summary = tf.summary.audio("original0", t_data, 16050, 1)
-        p_audio_summary = tf.summary.audio("predicted0", p_data, 16050, 1)
-        tb_writer.add_summary(t_audio_summary, 0)
-        tb_writer.add_summary(p_audio_summary, 0)
+        path = "/home/grego/"
+        wavfile.write(path + "test.wav", 22050, t_data)
+        t_data = np.reshape(t_data, flattened_shape)
+        wavfile.write(path + "predicted.wav", 22050, p_data)
+
+
+        print(p_data)
+        p_data = tf.convert_to_tensor(p_data)
+        print("tensor p_data", p_data)
+        t_data = np.reshape(t_data, flattened_shape)
+
+
+
+
+
+
+
+        t_audio_summary = tf.summary.audio("original0", t_data, 22050, 1)
+        print("t_audio_summary", t_audio_summary)
+        p_audio_summary = tf.summary.audio("predicted0", p_data, 22050, 1)
+        print("p.value", p_audio_summary.value)
+        # tb_writer.add_summary(t_audio_summary, 0)
+        tb_writer.add_summary(p_audio_summary, 0).eval()
         tb_writer.flush()
         tb_writer.close()
         print("If this is printed on the screen, check tensorboard and look "
