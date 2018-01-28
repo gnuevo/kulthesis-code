@@ -14,7 +14,7 @@ from generator.readers import Reader
 from generator.batchers import DoubleSynchronisedRandomisedBatcher as \
     DSRBatcher
 from keras.callbacks import TensorBoard
-from .networks import SimpleAutoencoderNetwork
+from .networks import SimpleAutoencoderNetwork, DeepAutoencoderNetwork
 import tensorflow as tf
 import numpy as np
 import scipy.io.wavfile as wavfile
@@ -237,7 +237,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
     def fit_generator(self, batch_size=100, epochs=1, step=None,
                       train_section=None, val_section=None,
-                      history_file=None):
+                      history_file=None, function=None, function_args=[]):
         """
         
         Args:
@@ -262,7 +262,9 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                                   section=val_section)
 
             val_data = val_generator.generate_batches(batch_size=batch_size,
-                                                      randomise=False)
+                                                      randomise=False,
+                                                      function=function,
+                                                      function_args=function_args)
             val_steps = val_generator.get_nbatches_in_epoch(batch_size)
         else:
             val_data = None
@@ -277,7 +279,9 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                            step=step,
                                            section=train_section)
         train_data = train_generator.generate_batches(batch_size=batch_size,
-                                                      randomise=True)
+                                                      randomise=True,
+                                                      function=function,
+                                                      function_args=function_args)
 
         train_steps = train_generator.get_nbatches_in_epoch(batch_size)
         history = self._network.fit_generator(
@@ -294,7 +298,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
 
     def train_dataset(self, batch_size=100, epochs=1, step=None,
-                      validation=True, history_file=None):
+                      validation=True, history_file=None, function=None,
+                      function_args=[]):
         """Trains the dataset using the train section
 
         Gets the train section from the dataset and trains it with that section
@@ -321,11 +326,13 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         # train
         self.fit_generator(batch_size=batch_size, epochs=epochs, step=step,
                            train_section=train_section,
-                           val_section=val_section, history_file=history_file)
+                           val_section=val_section, history_file=history_file,
+                           function=function, function_args=function_args)
 
 
     def evaluate_generator(self, evaluate_section=None, batch_size=100, \
-                                                                step=None):
+                                                                step=None,
+                           function=None, function_args=[]):
         """
         
         Args:
@@ -349,7 +356,9 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                            step=step,
                                            section=evaluate_section)
         test_data = test_generator.generate_batches(batch_size=batch_size,
-                                                      randomise=True)
+                                                      randomise=True,
+                                                    function=function,
+                                                      function_args=function_args)
 
         train_steps = test_generator.get_nbatches_in_epoch(batch_size)
         evaluation = self._network.evaluate_generator(
@@ -380,7 +389,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         return self.evaluate_generator(evaluate_section=test_section,
                                        batch_size=batch_size, step=step)
 
-    def recover_audio(self, batch_size=100, tblogdir="/tmp/autoencoder"):
+    def recover_audio(self, batch_size=100, tblogdir="/tmp/autoencoder",
+                      function=None, function_args=[]):
         """Function to recover the audio samples using tensorboard audio 
         summary
         
@@ -402,7 +412,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                               step=None,
                                               section=test_section)
         test_data = test_generator.generate_batches(batch_size=batch_size,
-                                                    randomise=False)
+                                                    randomise=False, function=function,
+                                                      function_args=function_args)
         test_steps = test_generator.get_nbatches_in_epoch(batch_size=batch_size)
 
         def generator_filter():
@@ -415,7 +426,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         print("Looks good for now!!")
 
         test_data = test_generator.generate_batches(batch_size=batch_size,
-                                                    randomise=False)
+                                                    randomise=False, function=function,
+                                                      function_args=function_args)
         def generator_filter():
             for elem in test_data:
                 yield elem[0]
@@ -461,3 +473,20 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         tb_writer.close()
         print("If this is printed on the screen, check tensorboard and look "
               "for the audio")
+
+
+class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
+
+    def __init__(self, input_file, input_group, output_file,
+                 output_group, input_dimension=(1000, 2), encoding_dim=32,
+                 middle_layers=[]):
+        super().__init__(input_file, input_group, output_file, output_group,\
+        input_dimension=input_dimension, encoding_dim=encoding_dim)
+        self._middle_layers = middle_layers
+
+    def initialise(self, activation='relu', optimizer='adadelta',
+                   loss='binary_crossentropy'):
+        self._network = DeepAutoencoderNetwork(self._input_dimension,
+                                               self._middle_layers,
+                                               self._encoding_dim,
+                                               activation, optimizer, loss)
