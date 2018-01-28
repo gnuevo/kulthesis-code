@@ -92,13 +92,10 @@ class AutoencoderSkeleton(object):
             val_steps = None
 
         callbacks = self._callbacks if not self._callbacks == [] else None
-        print("Fit generator, train section", train_section)
-        print("validation_steps", val_steps)
         self._generator.configure(sample_length=self._input_dimension[0],
                                    batch_size=batch_size,
                                    step=step,
                                    section=train_section)
-        print(self._generator.get_nbatches_in_epoch())
         history = self._autoencoder.fit_generator(
             self._generator.generate_samples(),
             self._generator.get_nbatches_in_epoch(),
@@ -128,16 +125,12 @@ class AutoencoderSkeleton(object):
         data = self._generator.h5g["data"]
         train_section = data.attrs["train_set"]
         train_section = tuple(train_section)
-        print("Train section", train_section)
         train_section = self.song_section_to_chunk_section(data, train_section)
-        print("Train section", train_section)
 
         if validation:
             val_section = data.attrs["val_set"]
             val_section = tuple(val_section)
-            print("Val section", val_section)
             val_section = self.song_section_to_chunk_section(data, val_section)
-            print("Val section", val_section)
         else:
             val_section = None
 
@@ -216,7 +209,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         output_datasection = g_output.get_section(section, stereo=False,
                                                       channel=0).standarized()
 
-        print("---section", section, len(output_datasection))
         # create readers
         input_reader = Reader(input_datasection, sample_length,
                               g_input.chunk_size,
@@ -277,8 +269,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             val_steps = None
 
         callbacks = self._callbacks if not self._callbacks == [] else None
-        print("Fit generator, train section", train_section)
-        print("validation_steps", val_steps)
         train_generator = self.create_generator(self._input_file,
                                            self._input_group,
                                            self._output_file,
@@ -290,9 +280,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                                       randomise=True)
 
         train_steps = train_generator.get_nbatches_in_epoch(batch_size)
-        print(train_generator.get_nbatches_in_epoch(batch_size))
-        for layer in self._network.layers:
-            print(layer)
         history = self._network.fit_generator(
             train_data,
             train_steps,
@@ -323,13 +310,11 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         data = Dataset(self._input_file).group(self._input_group).data()
         train_section = data.attrs["train_set"]
         train_section = tuple(train_section)
-        print("Train section (in songs format)", train_section)
 
         # get info about the validation section
         if validation:
             val_section = data.attrs["val_set"]
             val_section = tuple(val_section)
-            print("Val section (in songs format)", val_section)
         else:
             val_section = None
 
@@ -367,8 +352,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                                       randomise=True)
 
         train_steps = test_generator.get_nbatches_in_epoch(batch_size)
-        for layer in self._network.layers:
-            print(layer)
         evaluation = self._network.evaluate_generator(
             test_data,
             steps=train_steps

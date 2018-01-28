@@ -144,9 +144,7 @@ class Reader(object):
         that are mono
         """
         shape = [self.sample_length]
-        print("shape", shape)
         shape.extend(list(self.dataset.shape[2:]))
-        print("shape", shape)
         return tuple(shape)
 
     def read_samples(self, function=None):

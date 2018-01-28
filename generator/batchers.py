@@ -54,14 +54,12 @@ class DoubleSynchronisedRandomisedBatcher(object):
         Returns: (int) number of batches that make an epoch
 
         """
-        print(type(self.input_reader.dataset))
         dataset = self.input_reader.dataset
         sample_length = self.input_reader.sample_length
         step = self.input_reader.step
         #FIXME the next line is for compatibility,
         # only DataSection or StandarizedDataSection should be used now
         if type(dataset) in (DataSection, StandarizedDataSection):
-            print("New part of get n batches    ")
             section = None
         else:
             section = self.input_reader.get_configuration()["reader:section"]
@@ -106,18 +104,13 @@ class DoubleSynchronisedRandomisedBatcher(object):
         # calculate the number of batches that fit in the buffer
         batches_in_buffer = self.buffer_size // batch_size
         # create array to store the batch
-        print("SIZE OF THE BUFFER")
         print((batches_in_buffer * batch_size, \
                                     self.sample_length, 2))
         buffer_size = batches_in_buffer * batch_size
         sample_shape = self.input_reader.sample_shape()
-        print("sample shape", sample_shape)
-        print("type buffer size", type(buffer_size), buffer_size)
         buffer_shape = [buffer_size]
-        print("")
         buffer_shape.extend(list(sample_shape))
         buffer_shape = tuple(buffer_shape)
-        print("buffer shape", buffer_shape)
         input_buffer_features = np.zeros(buffer_shape)
         output_buffer_features = np.zeros(buffer_shape)
 

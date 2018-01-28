@@ -59,6 +59,7 @@ class Experiment2(object):
                     output=config["output_group"],
                     file=file_name,
                     id=config["execution_id"])
+        print(name)
 
         # create directories to store the models and tensorboard summaries
         if config["tblogdir"] is not None:

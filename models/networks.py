@@ -29,11 +29,9 @@ def SimpleAutoencoderNetwork(input_dimension=(1000, 2), encoding_dim=32,
         flattened_dimension = (reduce(operator.mul, input_dimension),)
     else:
         flattened_dimension = input_dimension
-    print("flatten dim", flattened_dimension)
     # this is the size of our encoded representations
     # this is our input placeholder
     input_tensor = Input(shape=input_dimension)
-    print("here", input_tensor._keras_shape)
 
     # reshape if necessary, encode
     if len(input_dimension) > 1:

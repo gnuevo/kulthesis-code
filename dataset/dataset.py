@@ -67,8 +67,6 @@ class Group(object):
             (int), the number of batches
         """
         dataset = self._group.data
-        print("dataset shape", dataset.shape)
-        print("section", section)
         if section == None:
             total_audio_samples = dataset.shape[0] * dataset.shape[1]
         else:
@@ -83,12 +81,8 @@ class Group(object):
             else:
                 raise ValueError("input_format must be either 'chunks' or "
                                  "'songs', gotten", input_format)
-        print("Total audio samples = ", total_audio_samples)
-        print("Numero de muestras",
-              (total_audio_samples - sample_length) // step)
         n_batches = math.ceil(((total_audio_samples - sample_length) // step) / \
                               batch_size)
-        print("Total number of batches", n_batches)
         return n_batches
 
     def get_section(self, section, stereo=False, channel=0):
@@ -141,7 +135,6 @@ class DataSection(Sequence):
             channel: channel you want to get if stereo=False and data is stereo
         """
         self.group_data = group_data
-        print("DataSection data shape", group_data.shape)
         self.chunk_size = self.group_data.shape[1]
         self.attrs = self.group_data.attrs
         self.shape = self.group_data.shape
@@ -160,8 +153,6 @@ class DataSection(Sequence):
             else:
                 raise ValueError("section_format must be either 'songs' or "
                                  "'chunks', gotten", section_format)
-        print("DataSection start stop of section,", self._start_section,
-              self._stop_section)
 
         # create a filter function to extract the desired channel(s)
         if stereo == True:
@@ -207,7 +198,6 @@ class DataSection(Sequence):
 
     def __iter__(self):
         self.__iter_index = 0
-        print("len self", len(self))
         return self
 
     def __next__(self):
@@ -240,17 +230,12 @@ class StandarizedDataSection(object):
         self._data_section = data_section
         self.shape = self._data_section.shape
         self.attrs = self._data_section.attrs
-        print("data section shape", data_section.shape)
 
         # current_min = np.amin(self._data_section[0], axis=0)
         # current_max = np.amax(self._data_section[0], axis=0)
         # # find global minimum and maximum
-        # print("len datasection", len(data_section))
-        # print("last value", data_section[len(data_section)-1])
-        # print("looking for minimum and maximum")
         # import sys
         # i = 0
-        # print("")
         # for chunk in self._data_section:
         #     sys.stdout.write("{}".format(i))
         #     sys.stdout.flush()
@@ -262,7 +247,6 @@ class StandarizedDataSection(object):
         # self._min = current_min
         self._max = data_section.group_data.attrs['train_max']
         self._min = data_section.group_data.attrs['train_min']
-        # print("----------------------found them!!", current_min, current_max)
 
     def __len__(self):
         return  len(self._data_section)
