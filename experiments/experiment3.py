@@ -101,9 +101,14 @@ class Experiment3(object):
                                                      output_file,
                                                      output_group,
                                                      input_dimension=input_shape,
-                                                    middle_layers=[],
+                                                     middle_layers=[],
                                                      encoding_dim=hidden_size)
             autoencoder.initialise(activation, optimizer, loss)
+
+            # program learning rate and decay
+            # autoencoder.callback_learning_rate_scheduler(
+            #                         config["learning_rate"],
+            #                         config["decay"])
 
             if config["tblogdir"] is not None:
                 autoencoder.callback_add_tensorboard(
@@ -118,6 +123,12 @@ class Experiment3(object):
             if config["model_dir"] is not None:
                 autoencoder.callback_add_modelcheckpoint(config[
                                                              "model_dir"] + name + ".h5")
+
+            if config["save"] is not None:
+                self.__create_directory(config["save"] + name)
+                autoencoder.callback_add_custommodelcheckpoint(
+                                config["save"] + name, period=config[
+                        "save_period"])
 
             everything_ok = False
             batch_size = config["batch_size"]
@@ -199,7 +210,13 @@ if __name__ == "__main__":
     parser.add_argument("--optimizer",
                         help="Desired optimizer, or list of them",
                         type=str, action='append', nargs='*',
-                        default=['adam'])
+                        default=['adadelta'])
+    parser.add_argument("--decay",
+                        help="Desired decay value",
+                        type=float, default=0.0)
+    parser.add_argument("-r", "--learning-rate",
+                        help="Starting learning rate",
+                        type=float, default=0.1)
     parser.add_argument("--loss",
                         help="Desired loss, or list of them",
                         type=str, action='append', nargs='*',
@@ -229,6 +246,13 @@ if __name__ == "__main__":
                         default=None)
     parser.add_argument("--model_dir", help="In this directory the models "
                                             "will be saved", type=str,
+                        default=None)
+    parser.add_argument("--save", help="In this directory the models "
+                                            "will be saved ("
+                                       "customModelCheckpoint)", type=str,
+                        default=5)
+    parser.add_argument("--save-period", help="Period to save model, "
+                                               "in epochs", type=int,
                         default=None)
     parser.add_argument("--early_stopping_patience", help="Adds early "
                                                           "stopping callback with the specified patience",
@@ -268,6 +292,10 @@ if __name__ == "__main__":
     batch_freq = dargs.tbbatchfreq
     validation = dargs.validate
     test = dargs.test
+    decay = dargs.decay
+    learning_rate = dargs.learning_rate
+    save = dargs.save
+    save_period = dargs.save_period
 
     config = {
         "input_file": input_file,
@@ -289,7 +317,11 @@ if __name__ == "__main__":
         "validation": validation,
         "test": test,
         "execution_id": dargs.identifier,
-        "stereo": stereo
+        "stereo": stereo,
+        "decay": decay,
+        "learning_rate": learning_rate,
+        "save": save,
+        "save_period": save_period
     }
 
     experiment = Experiment3(config)

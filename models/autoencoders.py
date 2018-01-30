@@ -18,6 +18,7 @@ from .networks import SimpleAutoencoderNetwork, DeepAutoencoderNetwork
 import tensorflow as tf
 import numpy as np
 import scipy.io.wavfile as wavfile
+import json
 
 class AutoencoderSkeleton(object):
     """Contains basic functionality common to all autoencoders
@@ -74,6 +75,23 @@ class AutoencoderSkeleton(object):
         self._callbacks = [callback for callback in self._callbacks if not
             type(callback) == type(modelcheckpoint_callback)]
         self._callbacks.append(modelcheckpoint_callback)
+
+    def callback_add_custommodelcheckpoint(self, dirpath, period=1):
+        from callbacks.customCheckPoint import customModelCheckpoint
+        callback = customModelCheckpoint(self, dirpath, period=period)
+        self._callbacks = [callback for callback in self._callbacks if not
+            type(callback) == type(callback)]
+        self._callbacks.append(callback)
+
+    def callback_learning_rate_scheduler(self, initial_lr, decay):
+        from keras.callbacks import LearningRateScheduler
+        def lrscheduler(epoch):
+            new_lr = initial_lr * 1.0/(1 + decay * epoch)
+            return new_lr
+        scheduler = LearningRateScheduler(lrscheduler)
+        self._callbacks = [callback for callback in self._callbacks if not
+            type(callback) == type(scheduler)]
+        self._callbacks.append(scheduler)
 
     def fit_generator(self, batch_size=1000, epochs=1, step=None,
                       train_section=None, val_section=None, history_file=None):
@@ -419,6 +437,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         def generator_filter():
             for elem in test_data:
                 yield elem[0]
+        print("Test steps", test_steps  )
         prediction = self._network.predict_generator(generator_filter(),
                                                      test_steps)
         print("type prediction", type(prediction))
@@ -446,7 +465,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         print("flattened shape", flattened_shape)
         p_data = np.reshape(p_data, p_data.shape[0] * p_data.shape[1])
 
-        path = "/home/grego/"
+        path = "/home/grego/PycharmProjects/style-transfer/output/"
         wavfile.write(path + "test.wav", 22050, t_data)
         t_data = np.reshape(t_data, flattened_shape)
         wavfile.write(path + "predicted.wav", 22050, p_data)
@@ -474,6 +493,30 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         print("If this is printed on the screen, check tensorboard and look "
               "for the audio")
 
+    def _get_config(self):
+        config = {
+            "input_file": self._input_file,
+            "input_group": self._input_group,
+            "output_file": self._output_file,
+            "output_grup": self._output_group,
+            "input_dimension": self._input_dimension,
+            "encoding_dim": self._encoding_dim,
+            "sample_length": self._sample_length
+        }
+        return config
+
+    def save(self, directory):
+        if not directory[-1] == "/": directory += "/"
+        config = self._get_config()
+        print(config)
+        with open(directory + "model.json", "w") as f:
+            f.write(json.dumps(config))
+            print(json.dumps(config))
+            f.close()
+        self._network.save(directory + "model.h5", overwrite=True,
+                           include_optimizer=True)
+
+
 
 class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
 
@@ -490,3 +533,15 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
                                                self._middle_layers,
                                                self._encoding_dim,
                                                activation, optimizer, loss)
+
+    def _get_config(self):
+        print("here----")
+        config = super()._get_config()
+        print(config)
+        extra_config = {
+            "middle_layers": self._middle_layers
+        }
+        print(extra_config)
+        for key in extra_config.keys():
+            config[key] = extra_config[key]
+        return config
