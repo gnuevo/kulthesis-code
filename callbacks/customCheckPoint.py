@@ -16,4 +16,4 @@ class customModelCheckpoint(kcallbacks.Callback):
         if self._epochs_since_last_save >= self._period:
             self._epochs_since_last_save = 0
             print("saving model")
-            self._model.save(self._dirpath)
+            self._model.save(self._dirpath, {"last_epoch": epoch})

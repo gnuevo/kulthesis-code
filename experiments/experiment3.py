@@ -96,14 +96,18 @@ class Experiment3(object):
             else:
                 input_shape = (input_size,)
             print(">>>>STRING NAME", string_name)
-            autoencoder = DeepDoubleAutoencoderGenerator(input_file,
-                                                     input_group,
-                                                     output_file,
-                                                     output_group,
-                                                     input_dimension=input_shape,
-                                                     middle_layers=[],
-                                                     encoding_dim=hidden_size)
-            autoencoder.initialise(activation, optimizer, loss)
+            if config["load_model"] == None:
+                autoencoder = DeepDoubleAutoencoderGenerator(input_file,
+                                                         input_group,
+                                                         output_file,
+                                                         output_group,
+                                                         input_dimension=input_shape,
+                                                         middle_layers=[],
+                                                         encoding_dim=hidden_size)
+                autoencoder.initialise(activation, optimizer, loss)
+            else:
+                autoencoder = DeepDoubleAutoencoderGenerator.load(config[
+                                                                      "load_model"])
 
             # program learning rate and decay
             # autoencoder.callback_learning_rate_scheduler(
@@ -250,9 +254,12 @@ if __name__ == "__main__":
     parser.add_argument("--save", help="In this directory the models "
                                             "will be saved ("
                                        "customModelCheckpoint)", type=str,
-                        default=5)
+                        default=None)
     parser.add_argument("--save-period", help="Period to save model, "
                                                "in epochs", type=int,
+                        default=5)
+    parser.add_argument("--load-model", help="Load network and continue "
+                                           "training", type=str,
                         default=None)
     parser.add_argument("--early_stopping_patience", help="Adds early "
                                                           "stopping callback with the specified patience",
@@ -296,6 +303,7 @@ if __name__ == "__main__":
     learning_rate = dargs.learning_rate
     save = dargs.save
     save_period = dargs.save_period
+    load_model = dargs.load_model
 
     config = {
         "input_file": input_file,
@@ -321,7 +329,8 @@ if __name__ == "__main__":
         "decay": decay,
         "learning_rate": learning_rate,
         "save": save,
-        "save_period": save_period
+        "save_period": save_period,
+        "load_model": load_model
     }
 
     experiment = Experiment3(config)

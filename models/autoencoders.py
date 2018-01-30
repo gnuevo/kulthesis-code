@@ -19,6 +19,8 @@ import tensorflow as tf
 import numpy as np
 import scipy.io.wavfile as wavfile
 import json
+from keras.models import load_model
+from abc import abstractmethod
 
 class AutoencoderSkeleton(object):
     """Contains basic functionality common to all autoencoders
@@ -121,8 +123,10 @@ class AutoencoderSkeleton(object):
             validation_steps=val_steps,
             epochs=epochs,
             callbacks=callbacks,
-            verbose=1
+            verbose=1,
+            initial_epoch=self._last_epoch
         )
+        self._last_epoch = epochs
         if history_file is not None:
             pickle(history.history, history_file)
 
@@ -160,8 +164,27 @@ class AutoencoderSkeleton(object):
     def test_dataset(self):
         pass
 
+    def save(self, directory, extra_config={}):
+        if not directory[-1] == "/": directory += "/"
+        config = self._get_config()
+        print(config)
+        for key in extra_config.keys():
+            config[key] = extra_config[key]
+        with open(directory + "model.json", "w") as f:
+            f.write(json.dumps(config))
+            print(json.dumps(config))
+            f.close()
+        self._network.save(directory + "model.h5", overwrite=True,
+                           include_optimizer=True)
 
+    def _load(self, config):
+        pass
 
+    def load(self, directory):
+        if not directory[-1] == "/": directory += "/"
+        config = json.loads(open(directory + "model.json", "r"))
+        self._load(config)
+        self._network = load_model(directory + "model.h5")
 
 
 class DoubleAutoencoderGenerator(AutoencoderSkeleton):
@@ -498,23 +521,24 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             "input_file": self._input_file,
             "input_group": self._input_group,
             "output_file": self._output_file,
-            "output_grup": self._output_group,
+            "output_group": self._output_group,
             "input_dimension": self._input_dimension,
             "encoding_dim": self._encoding_dim,
             "sample_length": self._sample_length
         }
         return config
 
-    def save(self, directory):
-        if not directory[-1] == "/": directory += "/"
-        config = self._get_config()
-        print(config)
-        with open(directory + "model.json", "w") as f:
-            f.write(json.dumps(config))
-            print(json.dumps(config))
-            f.close()
-        self._network.save(directory + "model.h5", overwrite=True,
-                           include_optimizer=True)
+    def _load(self, config):
+        super()._load(config)
+        self._input_file = config["input_file"]
+        self._input_group = config["input_group"]
+        self._output_file = config["output_file"]
+        self._output_group = config["output_group"]
+        self._input_dimension = config["input_dimension"]
+        self._encoding_dim = config["encoding_dim"]
+        self._sample_length = config["sample_lenght"]
+
+
 
 
 
@@ -529,6 +553,7 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
 
     def initialise(self, activation='relu', optimizer='adadelta',
                    loss='binary_crossentropy'):
+        self._last_epoch = 0
         self._network = DeepAutoencoderNetwork(self._input_dimension,
                                                self._middle_layers,
                                                self._encoding_dim,
@@ -545,3 +570,18 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
         for key in extra_config.keys():
             config[key] = extra_config[key]
         return config
+
+    @abstractmethod
+    def load(directory):
+        print("I am f*cking loading!!!!!!!!!!!!!!")
+        if not directory[-1] == "/": directory += "/"
+        print("open", directory + "model.json")
+        config = json.load(open(directory + "model.json", "r"))
+        model = DeepDoubleAutoencoderGenerator(config["input_file"], config[
+            "input_group"], config["output_file"], config["output_group"],
+                                               config["input_dimension"], 
+                                               config["encoding_dim"], 
+                                               config["middle_layers"])
+        model._last_epoch = config["last_epoch"]
+        model._network = load_model(directory + "model.h5")
+        return model
