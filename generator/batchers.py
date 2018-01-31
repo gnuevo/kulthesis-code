@@ -65,6 +65,7 @@ class DoubleSynchronisedRandomisedBatcher(object):
             section = self.input_reader.get_configuration()["reader:section"]
         # readers always get their section in the form of 'songs'
         input_format = "songs"
+        print("before measuring num batches batch size", batch_size)
         return total_batches(dataset, sample_length, step, batch_size,
                              section=section, input_format=input_format)
 

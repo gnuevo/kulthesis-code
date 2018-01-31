@@ -155,6 +155,8 @@ def total_batches(dataset, sample_length, step, batch_size, section=None,
     """
     if section == None:
         total_audio_samples = dataset.shape[0] * dataset.shape[1]
+        print("dataset shape", dataset.shape, type(dataset))
+        print("holaaaaaaaaaaaaaaaaaaaa")
     else:
         if input_format == "songs":
             songs_lengths = dataset.attrs["songs_lengths"]
@@ -165,8 +167,8 @@ def total_batches(dataset, sample_length, step, batch_size, section=None,
         else:
             raise ValueError("input_format must be either 'chunks' or "
                              "'songs', gotten", input_format)
-    n_batches = math.ceil(((total_audio_samples - sample_length) // step) / \
-                batch_size)
+    total_samples = np.ceil((total_audio_samples - sample_length + 1)/step)
+    n_batches = math.ceil(total_samples / batch_size)
     return n_batches
 
 
