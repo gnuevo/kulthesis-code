@@ -171,7 +171,7 @@ class AutoencoderSkeleton(object):
         for key in extra_config.keys():
             config[key] = extra_config[key]
         with open(directory + "model.json", "w") as f:
-            f.write(json.dumps(config))
+            f.write(json.dumps(config), indent=4)
             print(json.dumps(config))
             f.close()
         self._network.save(directory + "model.h5", overwrite=True,
@@ -371,9 +371,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                            function=function, function_args=function_args)
 
 
-    def evaluate_generator(self, evaluate_section=None, batch_size=100, \
-                                                                step=None,
-                           function=None, function_args=[]):
+    def evaluate_generator(self, evaluate_section=None, batch_size=100,
+                            step=None, function=None, function_args=[]):
         """
         
         Args:
@@ -397,14 +396,14 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                            step=step,
                                            section=evaluate_section)
         test_data = test_generator.generate_batches(batch_size=batch_size,
-                                                      randomise=True,
+                                                      randomise=False,
                                                     function=function,
                                                       function_args=function_args)
 
-        train_steps = test_generator.get_nbatches_in_epoch(batch_size)
+        test_steps = test_generator.get_nbatches_in_epoch(batch_size)
         evaluation = self._network.evaluate_generator(
             test_data,
-            steps=train_steps
+            steps=test_steps
             )
         return evaluation
 
@@ -414,7 +413,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         
         Args:
             batch_size: 
-            step: 
+            step: recommended to keep it None
 
         Returns:
 
@@ -456,12 +455,10 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                                     randomise=False, function=function,
                                                       function_args=function_args)
         test_steps = test_generator.get_nbatches_in_epoch(batch_size=batch_size)
+        print("test steps", test_steps)
 
-        def generator_filter():
-            for elem in test_data:
-                yield elem[0]
         print("Test steps", test_steps  )
-        prediction = self._network.predict_generator(generator_filter(),
+        prediction = self._network.predict_generator(test_data,
                                                      test_steps)
         print("type prediction", type(prediction))
         print("shape of prediction", prediction.shape)
@@ -470,12 +467,13 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         test_data = test_generator.generate_batches(batch_size=batch_size,
                                                     randomise=False, function=function,
                                                       function_args=function_args)
+
         def generator_filter():
             for elem in test_data:
                 yield elem[0]
 
         t_data = np.ndarray([])
-        for _ in range(song_lengths[0]):
+        for _ in range(test_steps):
             new_data = next(generator_filter())
             t_data = np.append(t_data, new_data)
         print("shape t_data", t_data.shape)
@@ -492,29 +490,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         wavfile.write(path + "test.wav", 22050, t_data)
         t_data = np.reshape(t_data, flattened_shape)
         wavfile.write(path + "predicted.wav", 22050, p_data)
-
-
-        print(p_data)
-        p_data = tf.convert_to_tensor(p_data)
-        print("tensor p_data", p_data)
-        t_data = np.reshape(t_data, flattened_shape)
-
-
-
-
-
-
-
-        t_audio_summary = tf.summary.audio("original0", t_data, 22050, 1)
-        print("t_audio_summary", t_audio_summary)
-        p_audio_summary = tf.summary.audio("predicted0", p_data, 22050, 1)
-        print("p.value", p_audio_summary.value)
-        # tb_writer.add_summary(t_audio_summary, 0)
-        tb_writer.add_summary(p_audio_summary, 0).eval()
-        tb_writer.flush()
-        tb_writer.close()
-        print("If this is printed on the screen, check tensorboard and look "
-              "for the audio")
 
     def _get_config(self):
         config = {
@@ -560,13 +535,10 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
                                                activation, optimizer, loss)
 
     def _get_config(self):
-        print("here----")
         config = super()._get_config()
-        print(config)
         extra_config = {
             "middle_layers": self._middle_layers
         }
-        print(extra_config)
         for key in extra_config.keys():
             config[key] = extra_config[key]
         return config
