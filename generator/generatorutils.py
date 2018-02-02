@@ -131,7 +131,7 @@ def read_group_data(hdf5_file, group_name, sample_length, step=None):
 
 
 def total_batches(dataset, sample_length, step, batch_size, section=None,
-                  input_format="chunks"):
+                  input_format="chunks", left_padding=0):
     """Calculates the total batches in an epoch
 
     In's intended to use as the steps_per_epoch argument for the 
@@ -167,6 +167,9 @@ def total_batches(dataset, sample_length, step, batch_size, section=None,
         else:
             raise ValueError("input_format must be either 'chunks' or "
                              "'songs', gotten", input_format)
+    # consider a possible initial offset
+    total_audio_samples += left_padding
+
     total_samples = np.ceil((total_audio_samples - sample_length + 1)/step)
     n_batches = math.ceil(total_samples / batch_size)
     return n_batches

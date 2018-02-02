@@ -28,7 +28,7 @@ class DoubleSynchronisedRandomisedBatcher(object):
     that is why synchronised.
     
     """
-    def __init__(self, input_reader, output_reader, buffer_size=3000):
+    def __init__(self, input_reader, output_reader, buffer_size=2000):
         """Initialised the batcher
         
         Args:
@@ -56,6 +56,7 @@ class DoubleSynchronisedRandomisedBatcher(object):
         """
         dataset = self.input_reader.dataset
         sample_length = self.input_reader.sample_length
+        left_padding = self.input_reader.left_padding
         step = self.input_reader.step
         #FIXME the next line is for compatibility,
         # only DataSection or StandarizedDataSection should be used now
@@ -67,7 +68,8 @@ class DoubleSynchronisedRandomisedBatcher(object):
         input_format = "songs"
         print("before measuring num batches batch size", batch_size)
         return total_batches(dataset, sample_length, step, batch_size,
-                             section=section, input_format=input_format)
+                             section=section, input_format=input_format,
+                             left_padding=left_padding)
 
     def _divide_in_batches(self, samples, num_samples, batch_size):
         """Organises a list of samples into a list of batches

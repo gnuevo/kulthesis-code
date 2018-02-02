@@ -96,7 +96,7 @@ class Reader(object):
         dataset may be ignored.
         """
     def __init__(self, dataset, sample_length, chunk_size, step=None,
-                 section=None, buffer_size=500000):
+                 section=None, buffer_size=500000, left_padding=0):
         """Initialises the object and sets the necessary values
         
         Args:
@@ -114,6 +114,9 @@ class Reader(object):
             section (int, int): (tuple) first and last index of the section of 
                 the dataset that is intended to read. The dataset is virtually 
                 limited to the section from first index to last index
+            left_padding (int): sets the number of 0 amplitude audio samples 
+                added by default when generating the training samples. This 
+                helps to generate the test starting from different moments.
         """
         self.dataset = dataset
         self.sample_length = sample_length
@@ -124,6 +127,7 @@ class Reader(object):
         # self.section = song_section_to_chunk_section(dataset, section)
         self.section = None
         self.buffer_size = buffer_size
+        self.left_padding = left_padding
 
         self.__configuration = {
             "reader:dataset": dataset,
@@ -180,8 +184,12 @@ class Reader(object):
         chunks_in_buffer = buffer_size // chunk_size - chunk_size // \
                                                        sample_length - 1
 
-        buffer = dataset[start_of_section]  # load first chunk
-        bottom_index = start_of_section + 1  # +1 because the first chunk (
+        if self.left_padding > 0:
+            buffer = np.zeros(self.left_padding)
+            bottom_index = 0
+        else:
+            buffer = dataset[start_of_section]  # load first chunk
+            bottom_index = start_of_section + 1  # +1 because the first chunk (
         # start_of_section) was read already
         top_index = bottom_index  # just some initialisation
 
