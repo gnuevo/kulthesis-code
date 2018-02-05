@@ -156,7 +156,6 @@ def total_batches(dataset, sample_length, step, batch_size, section=None,
     if section == None:
         total_audio_samples = dataset.shape[0] * dataset.shape[1]
         print("dataset shape", dataset.shape, type(dataset))
-        print("holaaaaaaaaaaaaaaaaaaaa")
     else:
         if input_format == "songs":
             songs_lengths = dataset.attrs["songs_lengths"]

@@ -153,10 +153,9 @@ class DataSection(Sequence):
                 raise ValueError("section_format must be either 'songs' or "
                                  "'chunks', gotten", section_format)
         self.shape = list(self.group_data.shape)
+        # we have to add +1 because stop_section is included as the last chunk
         self.shape[0] = self._stop_section - self._start_section + 1
         self.shape = tuple(self.shape)
-        print("datasection, start, stop, shape", self._start_section,
-              self._stop_section, self.shape)
 
         # create a filter function to extract the desired channel(s)
         if stereo == True:
@@ -167,14 +166,9 @@ class DataSection(Sequence):
                 # return the selected channel
                 self._channel_filter = channel
                 self.shape = self.shape[:-1] # ignore last
-                print("herrrr")
             else:
                 raise ValueError("channel is not <int> or is out of range, "
                                  "channel=", channel)
-        print("la estoy liando ?datasection, start, stop, shape",
-              self._start_section,
-              self._stop_section, self.shape)
-        print("")
 
     def __len__(self):
         return self._stop_section - self._start_section
