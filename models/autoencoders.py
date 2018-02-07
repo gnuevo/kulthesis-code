@@ -81,8 +81,8 @@ class AutoencoderSkeleton(object):
     def callback_add_custommodelcheckpoint(self, dirpath, period=1):
         from callbacks.customCheckPoint import customModelCheckpoint
         callback = customModelCheckpoint(self, dirpath, period=period)
-        self._callbacks = [callback for callback in self._callbacks if not
-            type(callback) == type(callback)]
+        self._callbacks = [cbk for cbk in self._callbacks if not
+            type(cbk) == type(callback)]
         self._callbacks.append(callback)
 
     def callback_learning_rate_scheduler(self, initial_lr, decay):
@@ -342,7 +342,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
     def train_dataset(self, batch_size=100, epochs=1, step=None,
                       validation=True, history_file=None, function=None,
-                      function_args=[]):
+                      function_args=[], sample_weights=None):
         """Trains the dataset using the train section
 
         Gets the train section from the dataset and trains it with that section
@@ -370,7 +370,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         self.fit_generator(batch_size=batch_size, epochs=epochs, step=step,
                            train_section=train_section,
                            val_section=val_section, history_file=history_file,
-                           function=function, function_args=function_args)
+                           function=function, function_args=function_args,
+                           sample_weights=sample_weights)
 
 
     def evaluate_generator(self, evaluate_section=None, batch_size=100,
@@ -547,11 +548,19 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
 
 
-
+VAR = 0.2
+lin = np.linspace(0, 2 * np.pi, 1000)
+cos = np.cos(lin) + 1.0
+cos = cos * VAR
+# make it so that the max of error_weights is 1.0
+error_weights = cos + 1.0 - cos[0] + (max(cos) - min(cos))
+import keras.backend as K
+def custom_loss(y_true, y_pred):
+    return K.mean(K.square((y_pred - y_true) * error_weights), axis=-1)
 
 class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
 
-    def __init__(self, input_file, input_group, output_file,
+    def __init__(self, input_file, inputgi_group, output_file,
                  output_group, input_dimension=(1000, 2), encoding_dim=32,
                  middle_layers=[]):
         super().__init__(input_file, input_group, output_file, output_group,\
@@ -588,5 +597,9 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
                                                config["encoding_dim"], 
                                                config["middle_layers"])
         model._last_epoch = config["last_epoch"]
-        model._network = load_model(directory + "model.h5")
+        # import keras.losses
+        # keras.losses.custom_loss = custom_loss
+        model._network = load_model(directory + "model.h5", custom_objects={
+            'custom_loss': custom_loss
+        })
         return model

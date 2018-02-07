@@ -3,7 +3,7 @@
 Experiment 3 allows to train a network to convert from the timbre of one 
 instrument to another one. Using the DeepAutoencoder
 """
-
+from keras import losses
 import time
 import os
 import itertools
@@ -96,6 +96,17 @@ class Experiment3(object):
             else:
                 input_shape = (input_size,)
             print(">>>>STRING NAME", string_name)
+
+            if config["error_weights"] is not None:
+                lin = np.linspace(0, 2 * np.pi, input_shape[0])
+                cos = np.cos(lin) + 1.0
+                cos = cos * config["error_weights"]
+                # make it so that the max of error_weights is 1.0
+                error_weights = cos + 1.0 - cos[0] + (max(cos) - min(cos))
+                print("error weights shape", error_weights.shape)
+            else:
+                error_weights = None
+
             if config["load_model"] == None:
                 autoencoder = DeepDoubleAutoencoderGenerator(input_file,
                                                          input_group,
@@ -104,15 +115,24 @@ class Experiment3(object):
                                                          input_dimension=input_shape,
                                                          middle_layers=[],
                                                          encoding_dim=hidden_size)
-                autoencoder.initialise(activation, optimizer, loss)
+                if error_weights is not None:
+                    import keras.backend as K
+                    def custom_loss(y_true, y_pred):
+                        return K.mean(K.square((y_pred - y_true) *
+                                               error_weights),
+                                      axis=-1)
+                    autoencoder.initialise(activation, optimizer, custom_loss)
+                else:
+                    autoencoder.initialise(activation, optimizer, loss)
             else:
                 autoencoder = DeepDoubleAutoencoderGenerator.load(config[
                                                                       "load_model"])
 
             # program learning rate and decay
-            # autoencoder.callback_learning_rate_scheduler(
-            #                         config["learning_rate"],
-            #                         config["decay"])
+
+            autoencoder.callback_learning_rate_scheduler(
+                                    config["learning_rate"],
+                                    config["decay"])
 
             if config["tblogdir"] is not None:
                 autoencoder.callback_add_tensorboard(
@@ -121,10 +141,13 @@ class Experiment3(object):
                     variables=['loss', 'val_loss'])
 
             if config["early_stopping_patience"] is not None:
+                raise NotImplementedError("Please don't use early stopping "
+                                          "option")
                 autoencoder.callback_add_earlystopping(patience=config[
                     "early_stopping_patience"])
 
             if config["model_dir"] is not None:
+                raise NotImplementedError("Please don't use model dir option")
                 autoencoder.callback_add_modelcheckpoint(config[
                                                              "model_dir"] + name + ".h5")
 
@@ -136,6 +159,7 @@ class Experiment3(object):
 
             everything_ok = False
             batch_size = config["batch_size"]
+
             while not everything_ok:
                 try:
                     # run autoencoder
@@ -234,6 +258,10 @@ if __name__ == "__main__":
                         default=None)
     parser.add_argument("-e", "--epochs", help="The number of epochs to "
                                                "compute", type=int, default=1)
+    parser.add_argument("--error-weights", help="Triggers the use of "
+                                                 "error weights. Float "
+                                                 "between 0 and 1",
+                        type=float, default=None)
 
     # validation and test
     parser.add_argument("--validate", help="Performs validation after each "
@@ -330,7 +358,8 @@ if __name__ == "__main__":
         "learning_rate": learning_rate,
         "save": save,
         "save_period": save_period,
-        "load_model": load_model
+        "load_model": load_model,
+        "error_weights": dargs.error_weights
     }
 
     experiment = Experiment3(config)

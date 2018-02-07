@@ -96,7 +96,7 @@ class Reader(object):
         dataset may be ignored.
         """
     def __init__(self, dataset, sample_length, chunk_size, step=None,
-                 section=None, buffer_size=500000, left_padding=0):
+                 section=None, buffer_size=1000000, left_padding=0):
         """Initialises the object and sets the necessary values
         
         Args:

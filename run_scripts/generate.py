@@ -4,6 +4,10 @@
 
 import json
 from models.autoencoders import DeepDoubleAutoencoderGenerator
+import numpy as np
+
+
+
 
 def get_args():
     import argparse
