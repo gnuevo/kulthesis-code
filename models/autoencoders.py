@@ -370,8 +370,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         self.fit_generator(batch_size=batch_size, epochs=epochs, step=step,
                            train_section=train_section,
                            val_section=val_section, history_file=history_file,
-                           function=function, function_args=function_args,
-                           sample_weights=sample_weights)
+                           function=function, function_args=function_args)
 
 
     def evaluate_generator(self, evaluate_section=None, batch_size=100,
@@ -560,7 +559,7 @@ def custom_loss(y_true, y_pred):
 
 class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
 
-    def __init__(self, input_file, inputgi_group, output_file,
+    def __init__(self, input_file, input_group, output_file,
                  output_group, input_dimension=(1000, 2), encoding_dim=32,
                  middle_layers=[]):
         super().__init__(input_file, input_group, output_file, output_group,\
