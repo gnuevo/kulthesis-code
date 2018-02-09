@@ -129,10 +129,13 @@ class Experiment3(object):
                                                                       "load_model"])
 
             # program learning rate and decay
-
-            autoencoder.callback_learning_rate_scheduler(
-                                    config["learning_rate"],
-                                    config["decay"])
+            if config["learning_rate"] is not None:
+                raise RuntimeWarning("Learning rate defined. This can f*ck "
+                                     "up the training depending on the "
+                                     "optimizer. I hope you know what you're doing  ")
+                autoencoder.callback_learning_rate_scheduler(
+                                        config["learning_rate"],
+                                        config["decay"])
 
             if config["tblogdir"] is not None:
                 autoencoder.callback_add_tensorboard(
@@ -243,8 +246,12 @@ if __name__ == "__main__":
                         help="Desired decay value",
                         type=float, default=0.0)
     parser.add_argument("-r", "--learning-rate",
-                        help="Starting learning rate",
-                        type=float, default=0.1)
+                        help="WARNING, THIS COULD TOTALLY F*CK UP THE "
+                             "TRAINING IF YOU DON'T KNOW WHAT YOU'RE DOING"
+                             "Starting "
+                             "learning "
+                             "rate",
+                        type=float, default=None)
     parser.add_argument("--loss",
                         help="Desired loss, or list of them",
                         type=str, action='append', nargs='*',
