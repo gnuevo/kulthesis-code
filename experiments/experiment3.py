@@ -98,14 +98,13 @@ class Experiment3(object):
             print(">>>>STRING NAME", string_name)
 
             if config["error_weights"] is not None:
-                lin = np.linspace(0, 2 * np.pi, input_shape[0])
-                cos = np.cos(lin) + 1.0
-                cos = cos * config["error_weights"]
-                # make it so that the max of error_weights is 1.0
-                error_weights = cos + 1.0 - cos[0] + (max(cos) - min(cos))
-                print("error weights shape", error_weights.shape)
-            else:
-                error_weights = None
+                from models import losses
+                print("Using custom loss with param =", config[
+                    "error_weights"])
+                if config["stereo"]:
+                    raise ValueError("Error_weights DON'T work for 'stereo'")
+                loss = losses.WeightedMSE(input_shape[0], config[
+                    "error_weights"])
 
             if config["load_model"] == None:
                 autoencoder = DeepDoubleAutoencoderGenerator(input_file,
@@ -115,15 +114,7 @@ class Experiment3(object):
                                                          input_dimension=input_shape,
                                                          middle_layers=[],
                                                          encoding_dim=hidden_size)
-                if error_weights is not None:
-                    import keras.backend as K
-                    def custom_loss(y_true, y_pred):
-                        return K.mean(K.square((y_pred - y_true) *
-                                               error_weights),
-                                      axis=-1)
-                    autoencoder.initialise(activation, optimizer, custom_loss)
-                else:
-                    autoencoder.initialise(activation, optimizer, loss)
+                autoencoder.initialise(activation, optimizer, loss)
             else:
                 autoencoder = DeepDoubleAutoencoderGenerator.load(config[
                                                                       "load_model"])

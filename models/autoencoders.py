@@ -164,6 +164,9 @@ class AutoencoderSkeleton(object):
     def test_dataset(self):
         pass
 
+    def _get_config(self):
+        return dict()
+
     def save(self, directory, extra_config={}):
         if not directory[-1] == "/": directory += "/"
         config = self._get_config()
@@ -272,6 +275,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         The neural network gets already initialised during __init__ so if 
         this method is called the network behind is restarted.
         """
+        # keep track of the loss in case it is a custom one
+        self.loss = loss
         # call to the parent method
         self._network = SimpleAutoencoderNetwork(self._input_dimension,
                                                  self._encoding_dim,
@@ -475,8 +480,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             # prediction = np.pad(prediction, ((num_average -1 -i)*padding, 0),
             #                     'constant')
             print(i, "prediction shape after", prediction.shape)
-
-
             predictions.append(prediction)
         print("type prediction", type(prediction))
         print("shape of prediction", prediction.shape)
@@ -523,7 +526,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             wavfile.write(predict_out + "_predicted_{}.wav".format(name), 22050, p_data)
 
     def _get_config(self):
-        config = {
+        super_config = super()._get_config()
+        local_config = {
             "input_file": self._input_file,
             "input_group": self._input_group,
             "output_file": self._output_file,
@@ -533,6 +537,13 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             "sample_length": self._sample_length,
             "class": type(self)
         }
+        if not type(self.loss) == str:
+            print("Saving, loss", self.loss)
+            # custom loss
+            local_config["loss"] = self.loss.get_code()
+        else:
+            local_config["loss"] = self.loss
+        config = {**super_config, **local_config}
         return config
 
     def _load(self, config):
@@ -546,17 +557,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         self._sample_length = config["sample_lenght"]
 
 
-
-VAR = 0.2
-lin = np.linspace(0, 2 * np.pi, 1000)
-cos = np.cos(lin) + 1.0
-cos = cos * VAR
-# make it so that the max of error_weights is 1.0
-error_weights = cos + 1.0 - cos[0] + (max(cos) - min(cos))
-import keras.backend as K
-def custom_loss(y_true, y_pred):
-    return K.mean(K.square((y_pred - y_true) * error_weights), axis=-1)
-
 class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
 
     def __init__(self, input_file, input_group, output_file,
@@ -568,6 +568,8 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
 
     def initialise(self, activation='relu', optimizer='adadelta',
                    loss='binary_crossentropy'):
+        # keep track of the loss in case it is a custom one
+        self.loss = loss
         self._last_epoch = 0
         self._network = DeepAutoencoderNetwork(self._input_dimension,
                                                self._middle_layers,
@@ -590,15 +592,24 @@ class DeepDoubleAutoencoderGenerator(DoubleAutoencoderGenerator):
         if not directory[-1] == "/": directory += "/"
         print("open", directory + "model.json")
         config = json.load(open(directory + "model.json", "r"))
-        model = DeepDoubleAutoencoderGenerator(config["input_file"], config[
-            "input_group"], config["output_file"], config["output_group"],
+        model = DeepDoubleAutoencoderGenerator(config["input_file"],
+                                               config["input_group"],
+                                               config["output_file"],
+                                               config["output_group"],
                                                config["input_dimension"], 
                                                config["encoding_dim"], 
                                                config["middle_layers"])
         model._last_epoch = config["last_epoch"]
         # import keras.losses
         # keras.losses.custom_loss = custom_loss
-        model._network = load_model(directory + "model.h5", custom_objects={
-            'custom_loss': custom_loss
-        })
+        custom_objects = dict()
+        if "loss" in config:
+            # load custom loss
+            from .losses import CustomLoss, WeightedMSE
+            loss = CustomLoss.code_to_loss(config["loss"])
+            print("culo")
+            if not type(loss) == str:
+                custom_objects = {loss.__name__: loss}
+            print("custom objects", custom_objects)
+        model._network = load_model(directory + "model.h5", custom_objects=custom_objects)
         return model
