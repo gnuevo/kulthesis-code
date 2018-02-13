@@ -436,7 +436,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
         return self.evaluate_generator(evaluate_section=test_section,
                                        batch_size=batch_size, step=step)
 
-    def recover_audio(self, batch_size=100, tblogdir="/tmp/autoencoder",
+    # FIXME, deprecated function
+    def __old_recover_audio(self, batch_size=100, tblogdir="/tmp/autoencoder",
                       function=None, function_args=[], num_average=1,
                       test_out=None, predict_out=None, targets_out=None):
         """Function to recover the audio samples using tensorboard audio 
@@ -454,6 +455,43 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
 
         predictions = []
         padding = 203
+        tdictions = []
+        for i in range(1, num_average):
+            test_generator = self.create_generator(self._input_file,
+                                                   self._input_group,
+                                                   self._output_file,
+                                                   self._output_group,
+                                                   sample_length=self._sample_length,
+                                                   step=None,
+                                                   section=test_section,
+                                                   left_padding=padding * i)
+            test_data = test_generator.generate_batches(batch_size=batch_size,
+                                                        randomise=False,
+                                                        function=function,
+                                                        function_args=function_args)
+            test_steps = test_generator.get_nbatches_in_epoch(
+                batch_size=batch_size)
+            def generator_filter():
+                for elem in test_data:
+                    yield elem[0]
+
+            t_data = np.ndarray([])
+            for _ in range(test_steps):
+                new_data = next(generator_filter())
+                t_data = np.append(t_data, new_data)
+            tdictions.append(t_data[padding*i:])
+            wavfile.write(predict_out + "TDICTIONS  [{}]".format(int(i)), 22050,
+                          t_data)
+        tmaximum = max([len(t) for t in tdictions])
+        tdiff = np.pad(tdictions[0], (0,tmaximum - tdictions[0].shape[0]),
+                       "constant") - np.pad(tdictions[1], (0,tmaximum -
+                                                         tdictions[1].shape[
+            0]),
+                                            "constant")
+        wavfile.write(predict_out + "TDIFFFFFFF", 22050, tdiff)
+
+
+        self._network.predict(np.zeros((1, self._sample_length)))
         for i in range(num_average):
             test_generator = self.create_generator(self._input_file,
                                                   self._input_group,
@@ -468,8 +506,6 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
                                                           function_args=function_args)
             test_steps = test_generator.get_nbatches_in_epoch(batch_size=batch_size)
             print("test steps", test_steps)
-
-            print("Test steps", test_steps  )
             prediction = self._network.predict_generator(test_data,
                                                          test_steps)
             print(i, "prediction shape before", prediction.shape)
@@ -481,6 +517,7 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             #                     'constant')
             print(i, "prediction shape after", prediction.shape)
             predictions.append(prediction)
+            wavfile.write(predict_out + "[{}]".format(int(i)), 22050, prediction)
         print("type prediction", type(prediction))
         print("shape of prediction", prediction.shape)
         print("Looks good for now!!")
@@ -493,6 +530,13 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             p = np.pad(p, (0,maximum - p.shape[0]), "constant")
             average += p
         average = average / num_average
+
+        diff = np.pad(predictions[0], (0,maximum - predictions[0].shape[0]),
+                      "constant") - np.pad(predictions[1], (0,maximum -
+                                                            predictions[
+                                                                1].shape[0]),
+                      "constant")
+        wavfile.write(predict_out + "DIFFERENCE", 22050, diff)
 
         test_data = test_generator.generate_batches(batch_size=batch_size,
                                                     randomise=False, function=function,
@@ -507,10 +551,8 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             new_data = next(generator_filter())
             t_data = np.append(t_data, new_data)
         print("shape t_data", t_data.shape)
-        # working with tensorboard stuff
-        tb_writer = tf.summary.FileWriter(tblogdir)
-        p_data = average
-        print("p_data shape", p_data.shape)
+
+        print("p_data shape", average.shape)
         # flattened_shape = t_data.shape[0] * t_data.shape[1]
         flattened_shape = t_data.shape[0]
         print("flattened shape", flattened_shape)
@@ -523,7 +565,86 @@ class DoubleAutoencoderGenerator(AutoencoderSkeleton):
             wavfile.write(test_out + "_test_{}.wav".format(name), 22050, t_data)
         t_data = np.reshape(t_data, flattened_shape)
         if not predict_out == None:
-            wavfile.write(predict_out + "_predicted_{}.wav".format(name), 22050, p_data)
+            wavfile.write(predict_out + "_predicted_{}.wav".format(name),
+                          22050, average)
+
+    def recover_audio(self, batch_size=100, tblogdir="/tmp/autoencoder",
+                      function=None, function_args=[], num_average=1,
+                      predict_out=None, targets_out=None):
+        # get info on the test section
+        data = Dataset(self._input_file).group(self._input_group).data()
+        test_section = data.attrs["test_set"]
+        song_lengths = data.attrs["songs_lengths"]
+        test_section = tuple(test_section)
+
+        # FIXME, this is an empty prediction, I've experimented error with the
+        # first prediction done by the network so I've decided to include an
+        # empty one before the important ones
+        # FIXME, I'm not sure if this is needed or not; it looks it depends
+        # on the size of the batch as well
+        self._network.predict(np.zeros((1, self._sample_length)))
+
+        predictions = []
+        padding = 253
+        for i in range(num_average):
+            generator = self.create_generator(self._input_file,
+                                              self._input_group,
+                                              self._output_file,
+                                              self._output_group,
+                                              self._sample_length,
+                                              step=None,
+                                              section=test_section,
+                                              left_padding=i*padding)
+            data_samples = generator.generate_batches(batch_size,
+                                                      randomise=False,
+                                                      function=function,
+                                                      function_args=function_args)
+            num_samples = generator.get_nbatches_in_epoch(batch_size=batch_size)
+            pred = self._network.predict_generator(data_samples, num_samples)
+            # reshape predictions to make it only one vector
+            flattened_shape = pred.shape[0] * pred.shape[1]
+            pred = np.reshape(pred, flattened_shape)
+            # by slicing predicted with [i*padding:] we take out the left 0s
+            predictions.append(pred[i*padding:])
+        max_length = max(len(p) for p in predictions)
+        min_length = min(len(p) for p in predictions)
+        average = np.zeros(max_length)
+        for p in predictions:
+            p = np.pad(p, (0, max_length - p.shape[0]), "constant",
+                       constant_values=(0,0))
+            average = average + p
+        average = average / float(num_average)
+        # clip samples at the end
+        average = average[:min_length]
+        wavfile.write(predict_out, 22050, average)
+
+        if not targets_out == None:
+            generator = self.create_generator(self._input_file,
+                                              self._input_group,
+                                              self._output_file,
+                                              self._output_group,
+                                              self._sample_length,
+                                              step=None,
+                                              section=test_section,
+                                              left_padding=0)
+            test_data = generator.generate_batches(batch_size=batch_size,
+                                                        randomise=False,
+                                                        function=function,
+                                                        function_args=function_args)
+            num_samples = generator.get_nbatches_in_epoch(
+                batch_size=batch_size)
+
+            def generator_filter():
+                for elem in test_data:
+                    yield elem[0]
+            t_data = np.ndarray([])
+            for _ in range(num_samples):
+                new_data = next(generator_filter())
+                t_data = np.append(t_data, new_data)
+            flattened_shape = t_data.shape[0]
+            t_data = np.reshape(t_data, flattened_shape)
+            wavfile.write(targets_out + "_test.wav", 22050, t_data)
+
 
     def _get_config(self):
         super_config = super()._get_config()
