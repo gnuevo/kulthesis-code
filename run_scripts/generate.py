@@ -5,8 +5,7 @@
 import json
 from models.autoencoders import DeepDoubleAutoencoderGenerator
 import numpy as np
-
-
+from models.functions import linear_discretisation
 
 
 def get_args():
@@ -53,9 +52,11 @@ def main():
     model = DeepDoubleAutoencoderGenerator.load(dargs.load_model)
 
     model.recover_audio(batch_size=dargs.batch_size,
-                        num_average=dargs.num_average,
-                        test_out=dargs.out_targets,
-                        predict_out=dargs.out_predictions)
+                         num_average=dargs.num_average,
+                         test_out=dargs.out_targets,
+                         predict_out=dargs.out_predictions,
+                         function=linear_discretisation,
+                         function_args=[np.linspace(-1.0,1.0,num=256)])
 
 if __name__ == "__main__":
     main()
