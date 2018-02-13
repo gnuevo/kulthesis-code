@@ -53,7 +53,7 @@ def main():
 
     model.recover_audio(batch_size=dargs.batch_size,
                          num_average=dargs.num_average,
-                         test_out=dargs.out_targets,
+                         targets_out=dargs.out_targets,
                          predict_out=dargs.out_predictions,
                          function=linear_discretisation,
                          function_args=[np.linspace(-1.0,1.0,num=256)])
