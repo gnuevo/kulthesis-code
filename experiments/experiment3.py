@@ -9,12 +9,8 @@ import os
 import itertools
 from models.autoencoders import DeepDoubleAutoencoderGenerator
 from tensorflow.python.framework.errors_impl import ResourceExhaustedError
-
 import numpy as np
-def linear_discretisation(sample, bins=np.linspace(-1.0,1.0,num=256)):
-    digits = np.digitize(sample, bins)
-    return (digits / 128.0) - 0.5
-
+from models.functions import linear_discretisation
 
 
 class Experiment3(object):
