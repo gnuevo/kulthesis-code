@@ -184,12 +184,15 @@ class Reader(object):
         chunks_in_buffer = buffer_size // chunk_size - chunk_size // \
                                                        sample_length - 1
 
-        if self.left_padding > 0:
+        if self.left_padding >= 0:
             buffer = np.zeros(self.left_padding)
             bottom_index = 0
         else:
-            buffer = dataset[start_of_section]  # load first chunk
-            bottom_index = start_of_section + 1  # +1 because the first chunk (
+            # FIXME, the new modifications don't use this part of the code
+            # buffer = dataset[start_of_section]  # load first chunk
+            # bottom_index = start_of_section + 1  # +1 because the first chunk (
+            buffer = np.array([])
+            bottom_index = 0
         # start_of_section) was read already
         top_index = bottom_index  # just some initialisation
 
