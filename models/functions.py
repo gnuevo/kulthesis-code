@@ -12,7 +12,8 @@ def linear_discretisation(sample, bins=np.linspace(-1.0,1.0,num=256)):
 
 def mu_law_encoding(sample, channels=256, mu=255.0):
     # mu = channels - 1
-    mu_encoded = np.sign(sample)* np.log(1.0 +  mu * np.abs(sample))
+    mu_encoded = np.sign(sample)* np.log(1.0 +  mu * np.abs(sample)) / \
+                 np.log(1 + mu)
     discrete_mu = linear_discretisation(mu_encoded, bins=np.linspace(-1.0,
                                                                      1.0,
                                                                      num=channels))
