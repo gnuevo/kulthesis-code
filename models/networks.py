@@ -47,7 +47,7 @@ def SimpleAutoencoderNetwork(input_dimension=(1000, 2), encoding_dim=32,
 
     # decode, reshape if necessary
     if len(input_dimension) > 1:
-        decoded = Dense(flattened_dimension[0], activation=activation,
+        decoded = Dense(flattened_dimension[0], activation="tanh",
                         name="decoder"
                         )(encoded)
         output = Reshape(input_dimension,
@@ -55,7 +55,7 @@ def SimpleAutoencoderNetwork(input_dimension=(1000, 2), encoding_dim=32,
                          name="output_reshape")(
             decoded)
     else:
-        decoded = Dense(flattened_dimension[0], activation=activation,
+        decoded = Dense(flattened_dimension[0], activation="tanh",
                         name="decoder")(encoded)
         output = decoded
 
@@ -121,13 +121,13 @@ def DeepAutoencoderNetwork(input_dimension=(1000, 2),
 
     # output
     if len(input_dimension) > 1:
-        decoded = Dense(flattened_dimension[0], activation=activation,
+        decoded = Dense(flattened_dimension[0], activation="tanh",
                        name="output")(previous_layer)
         output = Reshape(input_dimension,
                          input_shape=flattened_dimension,
                          name="output_reshape")(decoded)
     else:
-        decoded = Dense(flattened_dimension[0], activation=activation,
+        decoded = Dense(flattened_dimension[0], activation="tanh",
                         name="output")(previous_layer)
         output = decoded
 
