@@ -13,6 +13,7 @@ from models.autoencoders import DeepDoubleAutoencoderGenerator
 from tensorflow.python.framework.errors_impl import ResourceExhaustedError
 import numpy as np
 from models.functions import linear_discretisation, mu_law_encoding
+import json
 
 
 def get_args():
@@ -84,6 +85,10 @@ def get_args():
                                            "epoch", action="store_true")
     parser.add_argument("--test", help="Performs test after training is "
                                        "finished", action="store_true")
+    parser.add_argument("--continue-training", help="Continues an unfinished "
+                                           "execution. Provide path to the "
+                                           "execution",
+                        type=str, default=None)
 
     # callbacks
     ## tensorboard
@@ -186,6 +191,27 @@ class Experiment4(object):
         if config.tblogdir is not None:
             self.__create_directory(config.tblogdir + name)
 
+        if config.save is not None:
+            self.__create_directory(config.save + name)
+
+        if config.continue_training is None:
+            with open(config.save + name + "/" + "train.json", 'w') as f:
+                f.write(json.dumps(
+                    vars(config),
+                    indent=4
+                ))
+        else:
+            print("Continuing training")
+            config.save = "/".join(config.continue_training.split('/')[:-1]) \
+                          + '/'
+            name = config.continue_training.split('/')[-1]
+            print("Loading configuraiton from", name)
+            print("Save directory", config.save)
+            # load training configuration
+            # d = json.load(open(config.save + "train.json", 'r'))
+            # for key, value in d.items():
+            #     config[key] = value
+
         # extract variables
         input_file = config.input_file
         input_group = config.input_group
@@ -211,6 +237,20 @@ class Experiment4(object):
             string_name = self.__create_string(input_size, hidden_size,
                                                activation, optimizer, loss,
                                                function)
+
+            # continue if this training has been already done
+            if config.continue_training is not None:
+                try:
+                    d = json.load(open(config.save + name + '/' +
+                                       string_name + '/model.json'))
+                    if d["trained_finished"]:
+                        print("Already finished training for", string_name)
+                        continue
+                except Exception as e:
+                    print(e)
+                    print("Not found trained_finished in", config.save + name + '/' + string_name)
+                    pass
+
             if config.stereo:
                 input_shape = (input_size, 2)
             else:
@@ -262,8 +302,9 @@ class Experiment4(object):
 
             if config.save is not None:
                 self.__create_directory(config.save + name)
+                save_directory = config.save + name + "/" + string_name
                 autoencoder.callback_add_custommodelcheckpoint(
-                                config.save + name + "/" + string_name,
+                                save_directory,
                     period=config.save_period)
 
             everything_ok = False
@@ -280,12 +321,16 @@ class Experiment4(object):
                                               function=f,
                                               function_args=f_args)
                     everything_ok = True
+                    # ensure last save
+                    if config.save is not None:
+                        autoencoder.save(save_directory,
+                                         {"trained_finished": True})
                 except ResourceExhaustedError as e:
                     # force restart with lower batch_size
                     everything_ok = False
-                    batch_size -= 10
-                    raise RuntimeWarning("The batch is too big! Error!")
-                    exit(-1)
+                    # divide batch by 2
+                    batch_size //= 2
+                    # raise RuntimeWarning("The batch is too big! Error!")
                     print("Restarting with batch", batch_size)
                 # except Exception as e:
                 #     print("Exception detected", type(e), e)
